@@ -3,6 +3,9 @@ backup/
 *.7z
 *.zip
 
+# --- Agent & Script Yönetimi ---
+.agent/
+
 # --- Python Derleme & Önbellek ---
 __pycache__/
 *.py[cod]

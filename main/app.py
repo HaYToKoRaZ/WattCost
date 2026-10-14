@@ -17,8 +17,12 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import pystray
 from PIL import Image, ImageDraw, ImageTk
-# Scriptin bulunduğu klasörü çalışma dizini yap (yolların daima doğru çalışması için)
-os.chdir(os.path.dirname(os.path.abspath(__file__)))
+# Scriptin / Exe'nin bulunduğu klasörü çalışma dizini yap (yolların daima doğru çalışması için)
+if getattr(sys, 'frozen', False):
+    _app_dir = os.path.dirname(sys.executable)
+else:
+    _app_dir = os.path.dirname(os.path.abspath(__file__))
+os.chdir(_app_dir)
 from rtss_overlay import RTSSOverlay
 
 # --- Günlük & Aylık Geçmiş Veritabanı Yöneticisi ---
@@ -1386,6 +1390,11 @@ class PowerTrackerApp:
             fill="x", padx=20, pady=(14, 10))
 
 if __name__ == "__main__":
+    if len(sys.argv) >= 3 and sys.argv[1] == "--watch":
+        from rtss_overlay import _watch_and_clear
+        _watch_and_clear(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else "WattCost")
+        sys.exit(0)
+
     root = tk.Tk()
     app = PowerTrackerApp(root)
     root.mainloop()

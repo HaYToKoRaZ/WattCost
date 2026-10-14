@@ -11,6 +11,10 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.pyd
+build/
+dist/
+derlenmis/
+*.spec
 
 # --- IDE ve Editör Dosyaları ---
 .vscode/

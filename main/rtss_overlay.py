@@ -58,12 +58,16 @@ class RTSSOverlay:
     def _start_watchdog(self):
         """Ana süreç nasıl ölürse ölsün, OSD slotunu temizleyen ayrı bir süreç başlatır."""
         try:
-            exe = sys.executable
-            pyw = os.path.join(os.path.dirname(exe), "pythonw.exe")
-            if os.path.exists(pyw):
-                exe = pyw
-            script = os.path.abspath(__file__)
-            args = [exe, script, "--watch", str(os.getpid()), self.app_name]
+            if getattr(sys, 'frozen', False):
+                # Exe modunda çalışırken: kendisini --watch argümanı ile çağır
+                args = [sys.executable, "--watch", str(os.getpid()), self.app_name]
+            else:
+                exe = sys.executable
+                pyw = os.path.join(os.path.dirname(exe), "pythonw.exe")
+                if os.path.exists(pyw):
+                    exe = pyw
+                script = os.path.abspath(__file__)
+                args = [exe, script, "--watch", str(os.getpid()), self.app_name]
             CREATE_NO_WINDOW = 0x08000000
             DETACHED_PROCESS = 0x00000008
             CREATE_NEW_PROCESS_GROUP = 0x00000200

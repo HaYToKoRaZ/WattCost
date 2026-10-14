@@ -199,6 +199,12 @@ class MSIAfterburnerReader:
         gpu_u = mahm_raw.get('GPU usage', 0.0)
         ram_mb = mahm_raw.get('RAM usage', 0.0)
         ram_pct = min(100, int((ram_mb / self.total_ram_mb) * 100))
+        cpu_clk = mahm_raw.get('CPU clock', 0.0)
+        gpu_clk = mahm_raw.get('GPU clock', 0.0)
+        vram_mb = mahm_raw.get('Memory usage', 0.0)
+        fan_rpm = mahm_raw.get('Fan tachometer', 0.0)
+        if fan_rpm <= 0:
+            fan_rpm = mahm_raw.get('Fan speed', 0.0)
 
         up_sec = int(self.k32.GetTickCount64() / 1000)
         hrs = up_sec // 3600
@@ -216,6 +222,10 @@ class MSIAfterburnerReader:
             'SGPU1UTI': f"{int(gpu_u)}",
             'SUSEDMEM': f"{int(ram_mb)}",
             'SMEMUTI': f"{ram_pct}",
+            'CPUCLK': f"{int(cpu_clk)}",
+            'GPUCLK': f"{int(gpu_clk)}",
+            'VRAMMEM': f"{int(vram_mb)}",
+            'FANRPM': f"{int(fan_rpm)}",
             'SUPTIME': uptime_str,
             '_source': 'MSI Afterburner'
         }
@@ -325,6 +335,7 @@ class PowerTrackerApp:
         "always_on_top": True,
         "close_to_tray": False,       # X ile kapatınca: False ise tamamen çıkar ve RTSS ekranını temizler
         "rtss_enabled": True,
+        "tray_mode": "dual_temp",     # dual_temp, cpu_uti, gpu_uti, cpu_temp, gpu_temp, power_w, hourly_tl, logo
         # RTSS OSD Değer Açma/Kapama & Etiket Değiştirme
         "rtss_show_fps": True,
         "rtss_label_fps": "FPS",
@@ -338,27 +349,55 @@ class PowerTrackerApp:
         "rtss_label_hourly": "TUKETIM",
         "rtss_color_hourly": "#10B981",
         "rtss_size_hourly": "100",
-        "rtss_show_cpu": False,
-        "rtss_label_cpu": "CPU",
-        "rtss_color_cpu": "#F59E0B",
-        "rtss_size_cpu": "100",
-        "rtss_show_gpu": False,
-        "rtss_label_gpu": "GPU",
-        "rtss_color_gpu": "#00E5FF",
-        "rtss_size_gpu": "100",
-        "rtss_show_ram": False,
-        "rtss_label_ram": "RAM",
-        "rtss_color_ram": "#A855F7",
-        "rtss_size_ram": "100",
         "rtss_show_session": True,
         "rtss_label_session": "OTURUM",
         "rtss_color_session": "#F59E0B",
         "rtss_size_session": "100",
-        "rtss_show_kwh": True,
         "rtss_show_today": False,
         "rtss_label_today": "BUGUN",
         "rtss_color_today": "#A855F7",
         "rtss_size_today": "100",
+        "rtss_show_month": False,
+        "rtss_label_month": "AY",
+        "rtss_color_month": "#EC4899",
+        "rtss_size_month": "100",
+        "rtss_show_cpu": False,
+        "rtss_label_cpu": "CPU",
+        "rtss_color_cpu": "#F59E0B",
+        "rtss_size_cpu": "100",
+        "rtss_show_cpu_w": False,
+        "rtss_label_cpu_w": "CPU-W",
+        "rtss_color_cpu_w": "#F59E0B",
+        "rtss_size_cpu_w": "100",
+        "rtss_show_cpu_clk": False,
+        "rtss_label_cpu_clk": "CPU-CLK",
+        "rtss_color_cpu_clk": "#FCD34D",
+        "rtss_size_cpu_clk": "100",
+        "rtss_show_gpu": False,
+        "rtss_label_gpu": "GPU",
+        "rtss_color_gpu": "#00E5FF",
+        "rtss_size_gpu": "100",
+        "rtss_show_gpu_w": False,
+        "rtss_label_gpu_w": "GPU-W",
+        "rtss_color_gpu_w": "#00E5FF",
+        "rtss_size_gpu_w": "100",
+        "rtss_show_gpu_clk": False,
+        "rtss_label_gpu_clk": "GPU-CLK",
+        "rtss_color_gpu_clk": "#38BDF8",
+        "rtss_size_gpu_clk": "100",
+        "rtss_show_vram": False,
+        "rtss_label_vram": "VRAM",
+        "rtss_color_vram": "#818CF8",
+        "rtss_size_vram": "100",
+        "rtss_show_ram": False,
+        "rtss_label_ram": "RAM",
+        "rtss_color_ram": "#A855F7",
+        "rtss_size_ram": "100",
+        "rtss_show_fan": False,
+        "rtss_label_fan": "FAN",
+        "rtss_color_fan": "#34D399",
+        "rtss_size_fan": "100",
+        "rtss_show_kwh": True,
         "rtss_multiline": True,
         "ui_tab": "genel"
     }
@@ -406,55 +445,122 @@ class PowerTrackerApp:
         self.init_tray_icon()
         self.update_loop()
 
-    def get_tray_font(self):
+    def get_tray_fonts(self):
         if not hasattr(self, '_tray_fonts'):
-            from PIL import ImageFont
             font_path = os.path.join(os.environ.get('WINDIR', 'C:\\Windows'), 'Fonts', 'segoeuib.ttf')
             if not os.path.exists(font_path):
                 font_path = os.path.join(os.environ.get('WINDIR', 'C:\\Windows'), 'Fonts', 'arialbd.ttf')
             try:
                 self._tray_fonts = (
-                    ImageFont.truetype(font_path, 21),
-                    ImageFont.truetype(font_path, 16)
+                    ImageFont.truetype(font_path, 26),  # Büyük tekil değer (%75, 45°)
+                    ImageFont.truetype(font_path, 20),  # Orta değer (240W, 1.8₺, C45°)
+                    ImageFont.truetype(font_path, 13)   # Küçük etiket (CPU, GPU, WATT)
                 )
             except Exception:
                 f_def = ImageFont.load_default()
-                self._tray_fonts = (f_def, f_def)
+                self._tray_fonts = (f_def, f_def, f_def)
         return self._tray_fonts
 
-    def create_tray_image(self, watt=0, cpu_temp=0, gpu_temp=0):
-        # 64x64 Dinamik Göstergeli Canlı Sıcaklık & Güç Simgesi
+    def set_tray_mode(self, mode):
+        self.config["tray_mode"] = mode
+        self.save_config()
+        if hasattr(self, 'tray_icon') and self.tray_icon:
+            hw = getattr(self, "_last_hw", {})
+            self.tray_icon.icon = self.create_tray_image(
+                watt=getattr(self, "_last_watt", 0),
+                cpu_temp=hw.get("cpu_temp", 0),
+                gpu_temp=hw.get("gpu_temp", 0),
+                cpu_uti=hw.get("cpu_uti", 0),
+                gpu_uti=hw.get("gpu_uti", 0),
+                hourly_tl=getattr(self, "_last_hourly", 0.0)
+            )
+
+    def create_tray_image(self, watt=0, cpu_temp=0, gpu_temp=0, cpu_uti=0, gpu_uti=0, hourly_tl=0.0):
+        mode = self.config.get("tray_mode", "dual_temp")
+
+        # Sabit Logo Modu
+        if mode == "logo":
+            logo_p = "bewicon.png" if os.path.exists("bewicon.png") else "app_icon.png"
+            if os.path.exists(logo_p):
+                try:
+                    return Image.open(logo_p).convert('RGBA').resize((64, 64), Image.Resampling.LANCZOS)
+                except Exception:
+                    pass
+
         img = Image.new('RGBA', (64, 64), color=(0, 0, 0, 0))
         draw = ImageDraw.Draw(img)
-        
-        # Çerçeve rengi: Sıcaklık veya yüke göre dinamik alarm
-        if cpu_temp >= 80 or gpu_temp >= 80 or watt > 480:
-            outline_color = (244, 63, 94, 255)   # Alarm Kırmızı
-        elif watt > 260:
-            outline_color = (0, 229, 255, 255)   # Neon Cyan (Oyun / Yük)
-        else:
-            outline_color = (16, 185, 129, 255)  # Canlı Yeşil (Normal / Boşta)
+        f_lg, f_md, f_sm = self.get_tray_fonts()
 
-        # Şık koyu cyber zemin
-        draw.rounded_rectangle([1, 1, 62, 62], radius=10, fill=(11, 15, 25, 250), outline=outline_color, width=2)
-        
-        font_val, font_lbl = self.get_tray_font()
+        # Alarm ve arka plan çerçeve rengini belirle
+        outline_color = (16, 185, 129, 255)  # Canlı Yeşil (varsayılan)
 
-        # Sıcaklıklar varsa görev çubuğunda CPU ve GPU derecelerini net göster
-        if cpu_temp > 0 or gpu_temp > 0:
-            # CPU Satırı: Mor etiket + Parlak beyaz derece
+        if mode in ("cpu_uti", "gpu_uti"):
+            val = cpu_uti if mode == "cpu_uti" else gpu_uti
+            lbl = "CPU" if mode == "cpu_uti" else "GPU"
+            lbl_color = (245, 158, 11, 255) if mode == "cpu_uti" else (0, 229, 255, 255)
+
+            if val >= 80:
+                outline_color = (244, 63, 94, 255)   # Kırmızı
+            elif val >= 50:
+                outline_color = (245, 158, 11, 255)  # Sarı
+            else:
+                outline_color = (16, 185, 129, 255)  # Yeşil
+
+            draw.rounded_rectangle([1, 1, 62, 62], radius=10, fill=(11, 15, 25, 250), outline=outline_color, width=2)
+            draw.text((10, 4), lbl, fill=lbl_color, font=f_sm)
+            draw.text((6, 23), f"%{int(val)}", fill=(241, 245, 249, 255), font=f_lg)
+
+        elif mode in ("cpu_temp", "gpu_temp"):
+            temp = cpu_temp if mode == "cpu_temp" else gpu_temp
+            lbl = "CPU" if mode == "cpu_temp" else "GPU"
+            lbl_color = (192, 132, 252, 255) if mode == "cpu_temp" else (0, 229, 255, 255)
+
+            if temp >= 80:
+                outline_color = (244, 63, 94, 255)
+            elif temp >= 70:
+                outline_color = (245, 158, 11, 255)
+            else:
+                outline_color = (16, 185, 129, 255)
+
+            draw.rounded_rectangle([1, 1, 62, 62], radius=10, fill=(11, 15, 25, 250), outline=outline_color, width=2)
+            draw.text((10, 4), lbl, fill=lbl_color, font=f_sm)
+            draw.text((8, 23), f"{int(temp)}°", fill=(241, 245, 249, 255), font=f_lg)
+
+        elif mode == "power_w":
+            if watt >= 350:
+                outline_color = (244, 63, 94, 255)
+            elif watt >= 200:
+                outline_color = (0, 229, 255, 255)
+            else:
+                outline_color = (16, 185, 129, 255)
+
+            draw.rounded_rectangle([1, 1, 62, 62], radius=10, fill=(11, 15, 25, 250), outline=outline_color, width=2)
+            draw.text((10, 4), "WATT", fill=(0, 229, 255, 255), font=f_sm)
+            draw.text((4, 25), f"{int(watt)}W", fill=(241, 245, 249, 255), font=f_md)
+
+        elif mode == "hourly_tl":
+            outline_color = (16, 185, 129, 255)
+            draw.rounded_rectangle([1, 1, 62, 62], radius=10, fill=(11, 15, 25, 250), outline=outline_color, width=2)
+            draw.text((12, 4), "TL/SA", fill=(16, 185, 129, 255), font=f_sm)
+            draw.text((4, 25), f"{hourly_tl:.1f}₺", fill=(241, 245, 249, 255), font=f_md)
+
+        else: # "dual_temp" (Klasik CPU & GPU iki satır)
+            if cpu_temp >= 80 or gpu_temp >= 80 or watt > 480:
+                outline_color = (244, 63, 94, 255)
+            elif watt > 260:
+                outline_color = (0, 229, 255, 255)
+            else:
+                outline_color = (16, 185, 129, 255)
+
+            draw.rounded_rectangle([1, 1, 62, 62], radius=10, fill=(11, 15, 25, 250), outline=outline_color, width=2)
             c_val_str = f"{int(cpu_temp)}°"
-            draw.text((4, 5), "C", fill=(192, 132, 252, 255), font=font_lbl)
-            draw.text((20, 4), c_val_str, fill=(241, 245, 249, 255), font=font_val)
+            draw.text((4, 5), "C", fill=(192, 132, 252, 255), font=f_sm)
+            draw.text((20, 4), c_val_str, fill=(241, 245, 249, 255), font=f_md)
 
-            # GPU Satırı: Cyan etiket + Parlak beyaz derece
             g_val_str = f"{int(gpu_temp)}°"
-            draw.text((4, 33), "G", fill=(0, 229, 255, 255), font=font_lbl)
-            draw.text((20, 32), g_val_str, fill=(241, 245, 249, 255), font=font_val)
-        else:
-            w_text = f"{int(watt)}W" if watt > 0 else "0W"
-            draw.text((10, 22), w_text, fill=(241, 245, 249, 255), font=font_val)
-            
+            draw.text((4, 33), "G", fill=(0, 229, 255, 255), font=f_sm)
+            draw.text((20, 32), g_val_str, fill=(241, 245, 249, 255), font=f_md)
+
         return img
 
     def init_tray_icon(self):
@@ -464,11 +570,22 @@ class PowerTrackerApp:
 
         icon_img = self.create_tray_image(0, 0, 0)
         
-        # Dinamik Tray Menüsü (Sağ tıkta canlı değerler)
+        # Dinamik Tray Menüsü (Sağ tıkta canlı değerler ve gösterge seçimi)
         menu = pystray.Menu(
             pystray.MenuItem(lambda item: self.tray_watt_str, lambda: None, enabled=False),
             pystray.MenuItem(lambda item: self.tray_temp_str, lambda: None, enabled=False),
             pystray.MenuItem(lambda item: self.tray_hourly_str, lambda: None, enabled=False),
+            pystray.Menu.SEPARATOR,
+            pystray.MenuItem("📌 Saatteki Gösterge (Tray)", pystray.Menu(
+                pystray.MenuItem("CPU Kullanımı (%)", lambda: self.set_tray_mode("cpu_uti"), checked=lambda item: self.config.get("tray_mode") == "cpu_uti"),
+                pystray.MenuItem("GPU Kullanımı (%)", lambda: self.set_tray_mode("gpu_uti"), checked=lambda item: self.config.get("tray_mode") == "gpu_uti"),
+                pystray.MenuItem("CPU & GPU Sıcaklığı (°C)", lambda: self.set_tray_mode("dual_temp"), checked=lambda item: self.config.get("tray_mode", "dual_temp") == "dual_temp"),
+                pystray.MenuItem("CPU Sıcaklığı (°C)", lambda: self.set_tray_mode("cpu_temp"), checked=lambda item: self.config.get("tray_mode") == "cpu_temp"),
+                pystray.MenuItem("GPU Sıcaklığı (°C)", lambda: self.set_tray_mode("gpu_temp"), checked=lambda item: self.config.get("tray_mode") == "gpu_temp"),
+                pystray.MenuItem("Prizden Toplam Güç (Watt)", lambda: self.set_tray_mode("power_w"), checked=lambda item: self.config.get("tray_mode") == "power_w"),
+                pystray.MenuItem("Saatlik Harcama (TL/sa)", lambda: self.set_tray_mode("hourly_tl"), checked=lambda item: self.config.get("tray_mode") == "hourly_tl"),
+                pystray.MenuItem("Sabit Logo (WattCost)", lambda: self.set_tray_mode("logo"), checked=lambda item: self.config.get("tray_mode") == "logo"),
+            )),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("Pencereyi Göster / Gizle", self.toggle_window, default=True),
             pystray.MenuItem("Oturumu Sıfırla", lambda: self.root.after(0, self.reset_session)),
@@ -566,14 +683,21 @@ class PowerTrackerApp:
 
     RTSS_ROWS = [
         # (show_key, label_key, color_key, size_key, title, def_color, def_size, def_label, def_active)
-        ("rtss_show_fps",     "rtss_label_fps",     "rtss_color_fps",     "rtss_size_fps",     "Anlık FPS",                 "#F43F5E", "100", "FPS",     True),
-        ("rtss_show_power",   "rtss_label_power",   "rtss_color_power",   "rtss_size_power",   "Prizden Güç (W)",           "#00E5FF", "100", "GUC",     True),
-        ("rtss_show_hourly",  "rtss_label_hourly",  "rtss_color_hourly",  "rtss_size_hourly",  "Saatlik Harcama (TL)",      "#10B981", "100", "TUKETIM", True),
-        ("rtss_show_cpu",     "rtss_label_cpu",     "rtss_color_cpu",     "rtss_size_cpu",     "İşlemci (CPU % ve °C)",     "#F59E0B", "100", "CPU",     False),
-        ("rtss_show_gpu",     "rtss_label_gpu",     "rtss_color_gpu",     "rtss_size_gpu",     "Ekran Kartı (GPU % ve °C)", "#00E5FF", "100", "GPU",     False),
-        ("rtss_show_ram",     "rtss_label_ram",     "rtss_color_ram",     "rtss_size_ram",     "Bellek (RAM %)",            "#A855F7", "100", "RAM",     False),
-        ("rtss_show_session", "rtss_label_session", "rtss_color_session", "rtss_size_session", "Oturum Tutarı (TL)",        "#F59E0B", "100", "OTURUM",  True),
-        ("rtss_show_today",   "rtss_label_today",   "rtss_color_today",   "rtss_size_today",   "Bugünkü Toplam (TL)",       "#A855F7", "100", "BUGUN",   False),
+        ("rtss_show_fps",       "rtss_label_fps",       "rtss_color_fps",       "rtss_size_fps",       "Anlık FPS",                 "#F43F5E", "100", "FPS",     True),
+        ("rtss_show_power",     "rtss_label_power",     "rtss_color_power",     "rtss_size_power",     "Prizden Güç (Toplam W)",    "#00E5FF", "100", "GUC",     True),
+        ("rtss_show_hourly",    "rtss_label_hourly",    "rtss_color_hourly",    "rtss_size_hourly",    "Saatlik Harcama (TL/sa)",   "#10B981", "100", "TUKETIM", True),
+        ("rtss_show_session",   "rtss_label_session",   "rtss_color_session",   "rtss_size_session",   "Oturum Tutarı (TL)",        "#F59E0B", "100", "OTURUM",  True),
+        ("rtss_show_today",     "rtss_label_today",     "rtss_color_today",     "rtss_size_today",     "Bugünkü Toplam (TL)",       "#A855F7", "100", "BUGUN",   False),
+        ("rtss_show_month",     "rtss_label_month",     "rtss_color_month",     "rtss_size_month",     "Bu Ayki Fatura (TL)",       "#EC4899", "100", "AY",      False),
+        ("rtss_show_cpu",       "rtss_label_cpu",       "rtss_color_cpu",       "rtss_size_cpu",       "İşlemci (CPU % ve °C)",     "#F59E0B", "100", "CPU",     False),
+        ("rtss_show_cpu_w",     "rtss_label_cpu_w",     "rtss_color_cpu_w",     "rtss_size_cpu_w",     "İşlemci Gücü (CPU Watt)",   "#F59E0B", "100", "CPU-W",   False),
+        ("rtss_show_cpu_clk",   "rtss_label_cpu_clk",   "rtss_color_cpu_clk",   "rtss_size_cpu_clk",   "İşlemci Hızı (CPU MHz)",    "#FCD34D", "100", "CPU-CLK", False),
+        ("rtss_show_gpu",       "rtss_label_gpu",       "rtss_color_gpu",       "rtss_size_gpu",       "Ekran Kartı (GPU % ve °C)", "#00E5FF", "100", "GPU",     False),
+        ("rtss_show_gpu_w",     "rtss_label_gpu_w",     "rtss_color_gpu_w",     "rtss_size_gpu_w",     "Ekran Kartı Gücü (GPU Watt)","#00E5FF", "100", "GPU-W",   False),
+        ("rtss_show_gpu_clk",   "rtss_label_gpu_clk",   "rtss_color_gpu_clk",   "rtss_size_gpu_clk",   "Ekran Kartı Hızı (GPU MHz)","#38BDF8", "100", "GPU-CLK", False),
+        ("rtss_show_vram",      "rtss_label_vram",      "rtss_color_vram",      "rtss_size_vram",      "Ekran Kartı VRAM (GB)",     "#818CF8", "100", "VRAM",    False),
+        ("rtss_show_ram",       "rtss_label_ram",       "rtss_color_ram",       "rtss_size_ram",       "Sistem Belleği (RAM %)",    "#A855F7", "100", "RAM",     False),
+        ("rtss_show_fan",       "rtss_label_fan",       "rtss_color_fan",       "rtss_size_fan",       "Fan Devri (RPM)",           "#34D399", "100", "FAN",     False),
     ]
 
     def make_btn(self, parent, text, command, fg=None, bg=None, padx=8, pady=3):
@@ -838,6 +962,34 @@ class PowerTrackerApp:
         tk.Label(f_hdr_r, text="RENK", font=(f_font, 7, "bold"), fg=THEME["text_muted"],
                  bg=THEME["card_bg"], width=3).pack(side="left", padx=2)
 
+        # Kaydırılabilir Sensör Listesi
+        f_scroll_box = tk.Frame(card, bg=THEME["card_bg"])
+        f_scroll_box.pack(fill="x", padx=6, pady=(0, 4))
+
+        canvas = tk.Canvas(f_scroll_box, bg=THEME["card_bg"], highlightthickness=0, height=200)
+        v_bar = tk.Scrollbar(f_scroll_box, orient="vertical", command=canvas.yview)
+        canvas.configure(yscrollcommand=v_bar.set)
+
+        rows_container = tk.Frame(canvas, bg=THEME["card_bg"])
+        rows_win = canvas.create_window((0, 0), window=rows_container, anchor="nw")
+
+        def _on_cfg(e):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+        rows_container.bind("<Configure>", _on_cfg)
+
+        def _on_c_cfg(e):
+            canvas.itemconfig(rows_win, width=e.width)
+        canvas.bind("<Configure>", _on_c_cfg)
+
+        def _on_wheel(e):
+            canvas.yview_scroll(int(-1 * (e.delta / 120)), "units")
+        
+        rows_container.bind("<Enter>", lambda e: canvas.bind_all("<MouseWheel>", _on_wheel))
+        rows_container.bind("<Leave>", lambda e: canvas.unbind_all("<MouseWheel>"))
+
+        canvas.pack(side="left", fill="both", expand=True)
+        v_bar.pack(side="right", fill="y")
+
         self.rtss_vars = {}
         self.rtss_entries = {}
         self.rtss_size_entries = {}
@@ -845,8 +997,8 @@ class PowerTrackerApp:
         self.rtss_colors = {}
 
         for show_key, label_key, color_key, size_key, title, def_color, def_size, def_label, def_active in self.RTSS_ROWS:
-            row = tk.Frame(card, bg=THEME["card_bg"])
-            row.pack(fill="x", padx=12, pady=1)
+            row = tk.Frame(rows_container, bg=THEME["card_bg"])
+            row.pack(fill="x", padx=6, pady=1)
 
             var = tk.BooleanVar(value=cfg.get(show_key, def_active))
             self.rtss_vars[show_key] = var
@@ -892,7 +1044,7 @@ class PowerTrackerApp:
 
             if show_key == "rtss_show_session":
                 self.rtss_kwh_var = tk.BooleanVar(value=cfg.get("rtss_show_kwh", True))
-                self.make_check(card, "Oturum yanında kWh de göster", self.rtss_kwh_var,
+                self.make_check(rows_container, "Oturum yanında kWh de göster", self.rtss_kwh_var,
                                 self.on_rtss_change).pack(anchor="w", padx=(30, 0))
 
         tk.Label(card, text="• Başlık kutusunu boş bırakırsanız sadece değer görünür.\n"
@@ -1053,12 +1205,40 @@ class PowerTrackerApp:
         p_cpu = _fmt("rtss_show_cpu", "rtss_label_cpu", "rtss_color_cpu", "rtss_size_cpu", "CPU", "#F59E0B", "100", f"%{cpu_uti} {cpu_temp}°C")
         if p_cpu: parts_l1.append(p_cpu)
 
+        cpu_w = hw.get("cpu_w", 0)
+        p_cpu_w = _fmt("rtss_show_cpu_w", "rtss_label_cpu_w", "rtss_color_cpu_w", "rtss_size_cpu_w", "CPU-W", "#F59E0B", "100", f"{cpu_w:.0f} W")
+        if p_cpu_w: parts_l1.append(p_cpu_w)
+
+        cpu_clk = hw.get("cpu_clk", 0)
+        if cpu_clk > 0:
+            clk_str = f"{cpu_clk/1000.0:.2f} GHz" if cpu_clk >= 1000 else f"{cpu_clk} MHz"
+            p_cpu_clk = _fmt("rtss_show_cpu_clk", "rtss_label_cpu_clk", "rtss_color_cpu_clk", "rtss_size_cpu_clk", "CPU-CLK", "#FCD34D", "100", clk_str)
+            if p_cpu_clk: parts_l1.append(p_cpu_clk)
+
         p_gpu = _fmt("rtss_show_gpu", "rtss_label_gpu", "rtss_color_gpu", "rtss_size_gpu", "GPU", "#00E5FF", "100", f"%{gpu_uti} {gpu_temp}°C")
         if p_gpu: parts_l1.append(p_gpu)
 
+        gpu_w = hw.get("gpu_w", 0)
+        p_gpu_w = _fmt("rtss_show_gpu_w", "rtss_label_gpu_w", "rtss_color_gpu_w", "rtss_size_gpu_w", "GPU-W", "#00E5FF", "100", f"{gpu_w:.0f} W")
+        if p_gpu_w: parts_l1.append(p_gpu_w)
+
+        gpu_clk = hw.get("gpu_clk", 0)
+        if gpu_clk > 0:
+            p_gpu_clk = _fmt("rtss_show_gpu_clk", "rtss_label_gpu_clk", "rtss_color_gpu_clk", "rtss_size_gpu_clk", "GPU-CLK", "#38BDF8", "100", f"{gpu_clk} MHz")
+            if p_gpu_clk: parts_l1.append(p_gpu_clk)
+
         parts_l2 = []
+        vram_mb = hw.get("vram_mb", 0)
+        if vram_mb > 0:
+            p_vram = _fmt("rtss_show_vram", "rtss_label_vram", "rtss_color_vram", "rtss_size_vram", "VRAM", "#818CF8", "100", f"{vram_mb/1024.0:.1f} GB")
+            if p_vram: parts_l2.append(p_vram)
+
         p_ram = _fmt("rtss_show_ram", "rtss_label_ram", "rtss_color_ram", "rtss_size_ram", "RAM", "#A855F7", "100", f"%{ram_uti}")
         if p_ram: parts_l2.append(p_ram)
+
+        if fan_rpm > 0:
+            p_fan = _fmt("rtss_show_fan", "rtss_label_fan", "rtss_color_fan", "rtss_size_fan", "FAN", "#34D399", "100", f"{fan_rpm} RPM")
+            if p_fan: parts_l2.append(p_fan)
 
         kwh_str = f" ({kwh:.2f} kWh)" if cfg.get("rtss_show_kwh", True) else ""
         p_sess = _fmt("rtss_show_session", "rtss_label_session", "rtss_color_session", "rtss_size_session", "OTURUM", "#F59E0B", "100", f"{total_tl:.2f} TL{kwh_str}")
@@ -1066,6 +1246,13 @@ class PowerTrackerApp:
 
         p_td = _fmt("rtss_show_today", "rtss_label_today", "rtss_color_today", "rtss_size_today", "BUGUN", "#A855F7", "100", f"{today_tl:.2f} TL")
         if p_td: parts_l2.append(p_td)
+
+        try:
+            month_tl = HistoryManager.get_summary().get("month_tl", 0.0)
+        except Exception:
+            month_tl = 0.0
+        p_mo = _fmt("rtss_show_month", "rtss_label_month", "rtss_color_month", "rtss_size_month", "AY", "#EC4899", "100", f"{month_tl:.2f} TL")
+        if p_mo: parts_l2.append(p_mo)
 
         if cfg.get("rtss_multiline", True):
             lines = []
@@ -1133,14 +1320,29 @@ class PowerTrackerApp:
                 ram_gb = 0.0
 
             try:
-                fan_rpm = int(float(sensors.get('FCPU', 0.0)))
+                fan_rpm = int(float(sensors.get('FANRPM', sensors.get('FCPU', 0.0))))
             except Exception:
                 fan_rpm = 0
 
+            try:
+                cpu_clk = int(float(sensors.get('CPUCLK', 0)))
+            except Exception:
+                cpu_clk = 0
+
+            try:
+                gpu_clk = int(float(sensors.get('GPUCLK', 0)))
+            except Exception:
+                gpu_clk = 0
+
+            try:
+                vram_mb = int(float(sensors.get('VRAMMEM', 0)))
+            except Exception:
+                vram_mb = 0
+
             self._last_hw = {
-                "cpu_w": cpu_w, "cpu_uti": cpu_uti, "cpu_temp": cpu_temp,
-                "gpu_w": gpu_w, "gpu_uti": gpu_uti, "gpu_temp": gpu_temp,
-                "ram_uti": ram_uti, "ram_gb": ram_gb, "fan_rpm": fan_rpm
+                "cpu_w": cpu_w, "cpu_uti": cpu_uti, "cpu_temp": cpu_temp, "cpu_clk": cpu_clk,
+                "gpu_w": gpu_w, "gpu_uti": gpu_uti, "gpu_temp": gpu_temp, "gpu_clk": gpu_clk,
+                "ram_uti": ram_uti, "ram_gb": ram_gb, "vram_mb": vram_mb, "fan_rpm": fan_rpm
             }
 
             self.lbl_cpu.config(text=f"{cpu_w:.0f} W • %{cpu_uti} • {cpu_temp}°C")
@@ -1218,20 +1420,25 @@ class PowerTrackerApp:
             self.lbl_saver_est.config(text=f"🌱 Tasarruf: {saver_tl:.2f} TL")
             self.lbl_game_est.config(text=f"🎮 Oyunda: {game_tl:.2f} TL")
 
+            self._last_watt = total_wall_w
+            self._last_hourly = hourly_tl
+
             # Sistem Tepsisini Canlı Güncelle (Tooltip, Canlı Sıcaklık & Menü)
             if hasattr(self, 'tray_icon') and self.tray_icon:
                 try:
                     # 1. Tooltip (Fare saatin oradaki simgeye gelince)
-                    self.tray_icon.title = f"WattCost HaYTooL: {total_wall_w:.0f}W | CPU: {cpu_temp}°C | GPU: {gpu_temp}°C | {hourly_tl:.2f} TL/sa"
+                    self.tray_icon.title = f"WattCost HaYTooL: {total_wall_w:.0f}W | CPU: {cpu_temp}°C (%{cpu_uti}) | GPU: {gpu_temp}°C (%{gpu_uti}) | {hourly_tl:.2f} TL/sa"
                     
                     # 2. Canlı Menü Öğeleri
                     self.tray_watt_str = f"⚡ Anlık Güç: {total_wall_w:.0f} W"
-                    self.tray_temp_str = f"🌡️ Sıcaklık: CPU {cpu_temp}°C  |  GPU {gpu_temp}°C"
+                    self.tray_temp_str = f"🌡️ Donanım: CPU {cpu_temp}°C (%{cpu_uti})  |  GPU {gpu_temp}°C (%{gpu_uti})"
                     self.tray_hourly_str = f"₺ Saatlik Maliyet: {hourly_tl:.2f} TL/sa"
                     
-                    # 3. İkon Üzerindeki Canlı Derece Göstergesi (CPU & GPU dereceleri saatin yanında canlı)
-                    if int(now) % 2 == 0:
-                        self.tray_icon.icon = self.create_tray_image(total_wall_w, cpu_temp, gpu_temp)
+                    # 3. İkon Üzerindeki Canlı Gösterge (Seçili tray_mode'a göre)
+                    self.tray_icon.icon = self.create_tray_image(
+                        watt=total_wall_w, cpu_temp=cpu_temp, gpu_temp=gpu_temp,
+                        cpu_uti=cpu_uti, gpu_uti=gpu_uti, hourly_tl=hourly_tl
+                    )
                 except Exception:
                     pass
 
@@ -1328,7 +1535,7 @@ class PowerTrackerApp:
         f_font = THEME["font_family"]
         top = tk.Toplevel(self.root)
         top.title("Ayarlar")
-        top.geometry("360x470")
+        top.geometry("360x530")
         top.configure(bg=THEME["card_bg"])
         top.resizable(False, False)
         top.transient(self.root)
@@ -1361,7 +1568,32 @@ class PowerTrackerApp:
             ent.pack(fill="x", ipady=3)
             entries[key] = ent
 
-        tk.Frame(top, bg=THEME["card_border"], height=1).pack(fill="x", padx=20, pady=(12, 6))
+        tk.Frame(top, bg=THEME["card_border"], height=1).pack(fill="x", padx=20, pady=(10, 4))
+
+        # Saatteki Simge Göstergesi Seçimi (Tray Mode)
+        f_tray_mode = tk.Frame(top, bg=THEME["card_bg"])
+        f_tray_mode.pack(fill="x", padx=20, pady=(2, 4))
+        tk.Label(f_tray_mode, text="📌 Saatteki Simge Göstergesi (Tray):", font=(f_font, 8, "bold"),
+                 fg=THEME["accent_cyan"], bg=THEME["card_bg"]).pack(anchor="w")
+
+        tray_mode_map = {
+            "dual_temp": "CPU & GPU Sıcaklığı (°C)",
+            "cpu_uti":   "CPU Kullanımı (%)",
+            "gpu_uti":   "GPU Kullanımı (%)",
+            "cpu_temp":  "CPU Sıcaklığı (°C)",
+            "gpu_temp":  "GPU Sıcaklığı (°C)",
+            "power_w":   "Prizden Toplam Güç (Watt)",
+            "hourly_tl": "Saatlik Harcama (TL/sa)",
+            "logo":      "Sabit WattCost Logosu"
+        }
+        rev_tray_map = {v: k for k, v in tray_mode_map.items()}
+        current_display_name = tray_mode_map.get(self.config.get("tray_mode", "dual_temp"), "CPU & GPU Sıcaklığı (°C)")
+
+        opt_tray = ttk.Combobox(f_tray_mode, values=list(tray_mode_map.values()), state="readonly", font=(f_font, 8))
+        opt_tray.set(current_display_name)
+        opt_tray.pack(fill="x", pady=(2, 0))
+
+        tk.Frame(top, bg=THEME["card_border"], height=1).pack(fill="x", padx=20, pady=(10, 4))
 
         autostart_var = tk.BooleanVar(value=WindowsAutoStart.is_enabled())
         self.make_check(top, "Windows başlangıcında otomatik başlat", autostart_var, None,
@@ -1381,13 +1613,16 @@ class PowerTrackerApp:
                 return
             self.config.update(values)
             self.config["close_to_tray"] = close_to_tray_var.get()
+            selected_mode_name = opt_tray.get()
+            self.config["tray_mode"] = rev_tray_map.get(selected_mode_name, "dual_temp")
             self.save_config()
             WindowsAutoStart.set_enabled(autostart_var.get())
             self.refresh_device_labels()
+            self.set_tray_mode(self.config["tray_mode"])
             top.destroy()
 
         self.make_btn(top, "💾 Kaydet", save_and_close, fg="#FFFFFF", bg="#2563EB", pady=7).pack(
-            fill="x", padx=20, pady=(14, 10))
+            fill="x", padx=20, pady=(12, 10))
 
 if __name__ == "__main__":
     if len(sys.argv) >= 3 and sys.argv[1] == "--watch":

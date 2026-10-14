@@ -1,0 +1,21 @@
+# --- Yedekler ve Arşivler ---
+backup/
+*.7z
+*.zip
+
+# --- Python Derleme & Önbellek ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
+
+# --- IDE ve Editör Dosyaları ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- Geçici / Log Dosyaları ---
+*.log
+scratch/
+scratch_*

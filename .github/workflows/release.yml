@@ -45,42 +45,43 @@ jobs:
       - name: Build Application with PyInstaller
         shell: pwsh
         run: |
-          $icoPath      = "main/app_icon.ico"
-          $pngPath      = "main/app_icon.png"
-          $versionPath  = "main/version_info.txt"
-          $manifestPath = "main/app.manifest"
+          $currDir = Get-Location
+          $icoPath      = "$currDir\main\app_icon.ico"
+          $pngPath      = "$currDir\main\app_icon.png"
+          $versionPath  = "$currDir\main\version_info.txt"
+          $manifestPath = "$currDir\main\app.manifest"
 
           New-Item -ItemType Directory -Path "dist" -Force | Out-Null
-          New-Item -ItemType Directory -Path "dist/temp_dist" -Force | Out-Null
-          New-Item -ItemType Directory -Path "dist/temp_build" -Force | Out-Null
+          New-Item -ItemType Directory -Path "dist\temp_dist" -Force | Out-Null
+          New-Item -ItemType Directory -Path "dist\temp_build" -Force | Out-Null
 
           pyinstaller --noconfirm --clean `
               --name "WattCost. HaYTooL" `
               --onedir `
               --windowed `
-              --icon $icoPath `
-              --manifest $manifestPath `
-              --version-file $versionPath `
+              --icon "$icoPath" `
+              --manifest "$manifestPath" `
+              --version-file "$versionPath" `
               --add-data "$pngPath;." `
-              --add-data "main/languages;languages" `
-              --distpath "dist/temp_dist" `
-              --workpath "dist/temp_build" `
-              --specpath "dist" `
-              "main/app.py"
+              --add-data "$currDir\main\languages;languages" `
+              --distpath "$currDir\dist\temp_dist" `
+              --workpath "$currDir\dist\temp_build" `
+              --specpath "$currDir\dist" `
+              "$currDir\main\app.py"
 
           # Tasi ve kok dosyalari yerlestir
-          Copy-Item "dist/temp_dist/WattCost. HaYTooL/*" -Destination "dist" -Recurse -Force
-          Remove-Item "dist/temp_dist" -Recurse -Force -ErrorAction SilentlyContinue
-          Remove-Item "dist/temp_build" -Recurse -Force -ErrorAction SilentlyContinue
+          Copy-Item "dist\temp_dist\WattCost. HaYTooL\*" -Destination "dist" -Recurse -Force
+          Remove-Item "dist\temp_dist" -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item "dist\temp_build" -Recurse -Force -ErrorAction SilentlyContinue
 
           # INI ve dil dosyalari
-          if (Test-Path "main/languages") {
-              New-Item -ItemType Directory -Path "dist/languages" -Force | Out-Null
-              Copy-Item "main/languages/*" -Destination "dist/languages" -Recurse -Force
+          if (Test-Path "main\languages") {
+              New-Item -ItemType Directory -Path "dist\languages" -Force | Out-Null
+              Copy-Item "main\languages\*" -Destination "dist\languages" -Recurse -Force
           }
-          if (Test-Path "main/app_icon.ico") {
-              New-Item -ItemType Directory -Path "dist/main" -Force | Out-Null
-              Copy-Item "main/app_icon.ico" -Destination "dist/main/app_icon.ico" -Force
+          if (Test-Path "main\app_icon.ico") {
+              New-Item -ItemType Directory -Path "dist\main" -Force | Out-Null
+              Copy-Item "main\app_icon.ico" -Destination "dist\main\app_icon.ico" -Force
           }
 
       - name: Package Portable ZIP

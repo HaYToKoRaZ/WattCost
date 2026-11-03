@@ -76,11 +76,6 @@
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" media="print" onload="this.media='all'">
   <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"></noscript>
-  
-  <!-- External Libraries: Lenis Smooth Scroll + Lucide Icons + GSAP -->
-  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
-  <script defer src="https://unpkg.com/lucide@latest"></script>
 
   <style>
     html {
@@ -573,7 +568,7 @@
   <section class="hero">
     <div class="container">
       <div class="badge-pill">
-        <i data-lucide="sparkles" style="width: 16px; height: 16px;"></i>
+        <svg class="lucide lucide-sparkles" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>
         <span data-i18n="hero_badge">Yeni Nesil Donanım Telemetrisi</span>
       </div>
 
@@ -582,11 +577,11 @@
 
       <div class="cta-group">
         <a href="https://github.com/HaYToKoRaZ/WattCost/releases" target="_blank" rel="nofollow noopener noreferrer" class="btn btn-primary">
-          <i data-lucide="download"></i>
+          <svg class="lucide lucide-download" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
           <span data-i18n="btn_download">Hemen İndir (Windows EXE)</span>
         </a>
         <a href="https://github.com/HaYToKoRaZ/WattCost" target="_blank" rel="nofollow noopener noreferrer" class="btn btn-outline">
-          <i data-lucide="github"></i>
+          <svg class="lucide lucide-github" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
           <span>GitHub Kaynak Kodu</span>
         </a>
       </div>
@@ -624,19 +619,19 @@
       <div class="tabs-wrapper">
         <div class="tab-nav">
           <button class="tab-btn active" onclick="switchTab('tab-cost')">
-            <i data-lucide="activity"></i> <span data-i18n="tab_cost_title">Maliyet & OSD</span>
+            <svg class="lucide lucide-activity" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg> <span data-i18n="tab_cost_title">Maliyet & OSD</span>
           </button>
           <button class="tab-btn" onclick="switchTab('tab-power')">
-            <i data-lucide="cpu"></i> <span data-i18n="tab_power_title">Güç Planları</span>
+            <svg class="lucide lucide-cpu" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="16" x="4" y="4" rx="2"/><rect width="6" height="6" x="9" y="9" rx="1"/><path d="M15 2v2"/><path d="M15 20v2"/><path d="M2 15h2"/><path d="M2 9h2"/><path d="M20 15h2"/><path d="M20 9h2"/><path d="M9 2v2"/><path d="M9 20v2"/></svg> <span data-i18n="tab_power_title">Güç Planları</span>
           </button>
           <button class="tab-btn" onclick="switchTab('tab-smart')">
-            <i data-lucide="bot"></i> <span data-i18n="tab_smart_title">Akıllı Geçiş & Hz</span>
+            <svg class="lucide lucide-bot" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg> <span data-i18n="tab_smart_title">Akıllı Geçiş & Hz</span>
           </button>
           <button class="tab-btn" onclick="switchTab('tab-compare')">
-            <i data-lucide="scale"></i> <span data-i18n="tab_compare_title">Plan Kıyaslama</span>
+            <svg class="lucide lucide-scale" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg> <span data-i18n="tab_compare_title">Plan Kıyaslama</span>
           </button>
           <button class="tab-btn" onclick="switchTab('tab-settings')">
-            <i data-lucide="settings"></i> <span data-i18n="tab_settings_title">Tarife & Ayarlar</span>
+            <svg class="lucide lucide-settings" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg> <span data-i18n="tab_settings_title">Tarife & Ayarlar</span>
           </button>
         </div>
 
@@ -719,37 +714,37 @@
 
       <div class="feature-grid">
         <div class="feature-card">
-          <div class="feature-icon"><i data-lucide="gauge"></i></div>
+          <div class="feature-icon"><svg class="lucide lucide-gauge" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg></div>
           <h3 data-i18n="feat_1_h">Kalibre Priz Modeli</h3>
           <p data-i18n="feat_1_p">AMD Ryzen 7 5800X, RTX 5070 12GB ve full ARGB sistemde bizzat wattmetre ile test edilerek formüle edilmiş hassas priz çekişi.</p>
         </div>
 
         <div class="feature-card">
-          <div class="feature-icon"><i data-lucide="gamepad-2"></i></div>
+          <div class="feature-icon"><svg class="lucide lucide-gamepad-2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" x2="10" y1="12" y2="12"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="15" x2="15.01" y1="13" y2="13"/><line x1="18" x2="18.01" y1="11" y2="11"/><rect width="20" height="12" x="2" y="6" rx="2"/></svg></div>
           <h3 data-i18n="feat_2_h">RTSS Oyun İçi Gösterge (HUD)</h3>
           <p data-i18n="feat_2_p">RivaTuner Statistics Server üzerinden oyun ekranına canlı Watt, Saatlik Maliyet, FPS ve donanım istatistiklerini yansıtır.</p>
         </div>
 
         <div class="feature-card">
-          <div class="feature-icon"><i data-lucide="sliders"></i></div>
+          <div class="feature-icon"><svg class="lucide lucide-sliders" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="4" y1="21" y2="14"/><line x1="4" x2="4" y1="10" y2="3"/><line x1="12" x2="12" y1="21" y2="12"/><line x1="12" x2="12" y1="8" y2="3"/><line x1="20" x2="20" y1="21" y2="16"/><line x1="20" x2="20" y1="12" y2="3"/><line x1="1" x2="7" y1="14" y2="14"/><line x1="9" x2="15" y1="8" y2="8"/><line x1="17" x2="23" y1="16" y2="16"/></svg></div>
           <h3 data-i18n="feat_3_h">SmartSwitch & Otomatik Hz</h3>
           <p data-i18n="feat_3_p">Boştayken sistemi ve monitörü tasarrufa alır; oyun algılandığında tek bir gecikme olmadan en yüksek kademeye ve Hz değerine fırlar.</p>
         </div>
 
         <div class="feature-card">
-          <div class="feature-icon"><i data-lucide="headphones"></i></div>
+          <div class="feature-icon"><svg class="lucide lucide-headphones" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/></svg></div>
           <h3 data-i18n="feat_4_h">SteelSeries & Bluetooth Kulaklık</h3>
           <p data-i18n="feat_4_p">Ağır üretici yazılımlarına gerek kalmadan USB HID ve Windows Bluetooth üzerinden kulaklık şarjını ve kalan süreyi okur.</p>
         </div>
 
         <div class="feature-card">
-          <div class="feature-icon"><i data-lucide="droplet"></i></div>
+          <div class="feature-icon"><svg class="lucide lucide-droplet" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg></div>
           <h3 data-i18n="feat_5_h">Zalman LCD Pompa Entegrasyonu</h3>
           <p data-i18n="feat_5_p">Sıvı soğutmanın LCD ekranına CPU/GPU sıcaklıklarını aktarır. Kendi yazılımından kat kat daha az CPU ve RAM tüketir.</p>
         </div>
 
         <div class="feature-card">
-          <div class="feature-icon"><i data-lucide="shield-check"></i></div>
+          <div class="feature-icon"><svg class="lucide lucide-shield-check" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg></div>
           <h3 data-i18n="feat_6_h">Sürücüsüz & Güvenli Mimari</h3>
           <p data-i18n="feat_6_p">Kernel sürücüsü yüklemez. Telemetriyi MSI Afterburner veya AIDA64 paylaşımlı belleğinden (Shared Memory) ultra hızlı ve güvenle okur.</p>
         </div>
@@ -776,7 +771,7 @@
       <div class="footer-links">
         <a href="https://haytokoraz.github.io/" target="_blank" rel="noopener noreferrer" style="color: var(--primary); font-weight: 600;">🌐 HaYTooL PoRTaL</a>
         <a href="mailto:korazhayto@gmail.com" style="display: inline-flex; align-items: center; gap: 0.35rem;">
-          <i data-lucide="mail" style="width: 15px; height: 15px;"></i>
+          <svg class="lucide lucide-mail" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
           <span>korazhayto@gmail.com</span>
         </a>
         <a href="https://github.com/HaYToKoRaZ/WattCost" target="_blank" rel="nofollow noopener noreferrer">GitHub</a>
@@ -792,12 +787,7 @@
 
   <!-- Scripts -->
   <script>
-    // Initialize deferred libraries safely without forced reflow
-    window.addEventListener('DOMContentLoaded', () => {
-      if (window.lucide) {
-        lucide.createIcons();
-      }
-    });
+
 
     // Tab switching
     function switchTab(tabId) {

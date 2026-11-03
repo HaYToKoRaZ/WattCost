@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WattCost HaYTooL • PC Priz Güç & Donanım Telemetri Süiti</title>
   <meta name="description" content="WattCost HaYTooL: Windows için gerçekçi priz gücü (Watt), elektrik maliyeti (TL/$) takibi, RTSS oyun içi göstergesi ve akıllı güç planı otomasyonu.">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="icon" type="image/png" href="assets/images/app_icon.png">
   
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -85,14 +87,19 @@
       letter-spacing: -0.02em;
     }
     .brand-icon {
-      width: 34px;
-      height: 34px;
-      background: linear-gradient(135deg, var(--primary), var(--accent));
+      width: 36px;
+      height: 36px;
       border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #fff;
+      overflow: hidden;
+      box-shadow: 0 0 15px var(--primary-glow);
+    }
+    .brand-icon img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
     }
     .nav-links {
       display: flex;
@@ -114,23 +121,34 @@
       background: rgba(255, 255, 255, 0.05);
       border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 999px;
-      padding: 0.25rem;
-      gap: 0.25rem;
+      padding: 0.2rem;
+      gap: 0.35rem;
     }
     .lang-btn {
       background: transparent;
       border: none;
       color: var(--text-muted);
-      padding: 0.35rem 0.75rem;
+      padding: 0.35rem 0.85rem;
       border-radius: 999px;
       cursor: pointer;
       font-size: 0.85rem;
       font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
       transition: all 0.2s;
+    }
+    .lang-btn img {
+      width: 18px;
+      height: 13px;
+      border-radius: 2px;
+      object-fit: cover;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.4);
     }
     .lang-btn.active {
       background: var(--primary);
       color: #fff;
+      box-shadow: 0 0 12px var(--primary-glow);
     }
 
     /* Container */
@@ -458,7 +476,7 @@
   <nav>
     <a href="#" class="brand">
       <div class="brand-icon">
-        <i data-lucide="zap"></i>
+        <img src="assets/images/app_icon.png" alt="WattCost HaYTooL Icon">
       </div>
       <span>WattCost HaYTooL</span>
     </a>
@@ -470,10 +488,16 @@
       <li><a href="https://github.com/HaYToKoRaZ/WattCost" target="_blank">GitHub</a></li>
     </ul>
 
-    <!-- TR / EN Dil Seçimi -->
+    <!-- TR / EN Dil Seçimi (Bayraklı) -->
     <div class="lang-switcher">
-      <button class="lang-btn active" id="btn-tr" onclick="setLang('tr')">🇹🇷 TR</button>
-      <button class="lang-btn" id="btn-en" onclick="setLang('en')">🇬🇧 EN</button>
+      <button class="lang-btn active" id="btn-tr" onclick="setLang('tr', true)">
+        <img src="https://flagcdn.com/24x18/tr.png" alt="Türkçe">
+        <span>TR</span>
+      </button>
+      <button class="lang-btn" id="btn-en" onclick="setLang('en', true)">
+        <img src="https://flagcdn.com/24x18/gb.png" alt="English">
+        <span>EN</span>
+      </button>
     </div>
   </nav>
 
@@ -825,7 +849,9 @@
       }
     };
 
-    function setLang(lang) {
+    function setLang(lang, updateUrl = false) {
+      if (lang !== 'tr' && lang !== 'en') lang = 'tr';
+
       document.getElementById('btn-tr').classList.toggle('active', lang === 'tr');
       document.getElementById('btn-en').classList.toggle('active', lang === 'en');
       document.documentElement.lang = lang;
@@ -843,7 +869,38 @@
       if (costEl) {
         costEl.innerHTML = lang === 'tr' ? '1.09 <span>TL/sa</span>' : '$0.04 <span>/hr</span>';
       }
+
+      // URL hash senkronizasyonu (#tr veya #en)
+      if (updateUrl) {
+        const cleanUrl = window.location.origin + window.location.pathname + '#' + lang;
+        window.history.replaceState(null, '', cleanUrl);
+      }
     }
+
+    // Sayfa yuklendiginde URL'deki dili kontrol et (#en, #tr veya ?lang=en/tr)
+    window.addEventListener('DOMContentLoaded', () => {
+      const hash = window.location.hash.replace('#', '').toLowerCase();
+      const params = new URLSearchParams(window.location.search);
+      const urlLang = params.get('lang') || hash;
+      if (urlLang === 'en' || urlLang === 'tr') {
+        setLang(urlLang, false);
+      } else {
+        // Varsayilan tarayici dili veya TR
+        const browserLang = (navigator.language || navigator.userLanguage || '').toLowerCase();
+        if (browserLang.startsWith('en')) {
+          setLang('en', false);
+        } else {
+          setLang('tr', false);
+        }
+      }
+    });
+
+    window.addEventListener('hashchange', () => {
+      const hash = window.location.hash.replace('#', '').toLowerCase();
+      if (hash === 'en' || hash === 'tr') {
+        setLang(hash, false);
+      }
+    });
   </script>
 </body>
 </html>

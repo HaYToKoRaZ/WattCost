@@ -1,0 +1,114 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build, Package & Publish Release
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller pillow pystray hidapi pywin32 requests
+
+      - name: Setup Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Extract Version
+        id: get_version
+        shell: pwsh
+        run: |
+          $verJson = Get-Content "main/version.json" | ConvertFrom-Json
+          $ver = $verJson.version
+          if (-not $ver) { $ver = "6.0" }
+          Write-Host "Detected Version: $ver"
+          "VERSION=$ver" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Build Application with PyInstaller
+        shell: pwsh
+        run: |
+          $icoPath      = "main/app_icon.ico"
+          $pngPath      = "main/app_icon.png"
+          $versionPath  = "main/version_info.txt"
+          $manifestPath = "main/app.manifest"
+
+          New-Item -ItemType Directory -Path "dist" -Force | Out-Null
+          New-Item -ItemType Directory -Path "dist/temp_dist" -Force | Out-Null
+          New-Item -ItemType Directory -Path "dist/temp_build" -Force | Out-Null
+
+          pyinstaller --noconfirm --clean `
+              --name "WattCost. HaYTooL" `
+              --onedir `
+              --windowed `
+              --icon $icoPath `
+              --manifest $manifestPath `
+              --version-file $versionPath `
+              --add-data "$pngPath;." `
+              --add-data "main/languages;languages" `
+              --distpath "dist/temp_dist" `
+              --workpath "dist/temp_build" `
+              --specpath "dist" `
+              "main/main.py"
+
+          # Tasi ve kok dosyalari yerlestir
+          Copy-Item "dist/temp_dist/WattCost. HaYTooL/*" -Destination "dist" -Recurse -Force
+          Remove-Item "dist/temp_dist" -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item "dist/temp_build" -Recurse -Force -ErrorAction SilentlyContinue
+
+          # INI ve dil dosyalari
+          if (Test-Path "main/languages") {
+              New-Item -ItemType Directory -Path "dist/languages" -Force | Out-Null
+              Copy-Item "main/languages/*" -Destination "dist/languages" -Recurse -Force
+          }
+          if (Test-Path "main/app_icon.ico") {
+              New-Item -ItemType Directory -Path "dist/main" -Force | Out-Null
+              Copy-Item "main/app_icon.ico" -Destination "dist/main/app_icon.ico" -Force
+          }
+
+      - name: Package Portable ZIP
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "release_assets" -Force | Out-Null
+          $zipName = "release_assets/WattCost-HaYTooL-v$($env:VERSION)-Portable.zip"
+          Compress-Archive -Path "dist/*" -DestinationPath $zipName -Force
+          Write-Host "Portable Zip Created: $zipName"
+
+      - name: Build Setup Installer
+        shell: pwsh
+        run: |
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\iscc.exe"
+          & $iscc "/DAppVersion=$($env:VERSION)" "installer.iss"
+          Write-Host "Setup Installer Created: release_assets/WattCost-HaYTooL-v$($env:VERSION)-Setup.exe"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "v${{ env.VERSION }}"
+          name: "WattCost HaYTooL v${{ env.VERSION }}"
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            release_assets/WattCost-HaYTooL-v${{ env.VERSION }}-Setup.exe
+            release_assets/WattCost-HaYTooL-v${{ env.VERSION }}-Portable.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -4,7 +4,7 @@ backup/
 *.zip
 
 # --- Agent & Script Yönetimi ---
-.agent/
+.agents/
 
 # --- Python Derleme & Önbellek ---
 __pycache__/
@@ -13,7 +13,6 @@ __pycache__/
 *.pyd
 build/
 dist/
-derlenmis/
 *.spec
 
 # --- IDE ve Editör Dosyaları ---
@@ -26,3 +25,9 @@ derlenmis/
 *.log
 scratch/
 scratch_*
+
+# --- Kullaniciya Ozel Ayarlar ve Veritabani ---
+WattCost. HaYTooL.ini
+WattCost. HaYTooL.json
+main/WattCost. HaYTooL.ini
+main/WattCost. HaYTooL.json

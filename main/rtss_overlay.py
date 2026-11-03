@@ -138,8 +138,9 @@ class RTSSOverlay:
                                 b_result = True
                                 break
 
-                            # Metni Latin-1 ve temiz ASCII olarak hazırla
-                            text_clean = text.encode('latin-1', errors='ignore')
+                            # Metni Latin-1 ve temiz ASCII olarak hazırla (Unicode bullet • karakterini Latin-1 Middle Dot \xB7 ile eşle)
+                            text_sub = text.replace("•", "\xB7").replace("₺", "TL")
+                            text_clean = text_sub.encode('latin-1', errors='ignore')
                             
                             # KESIN COZUM: Yazmadan once OSD tamponlarini tamamen SIFIRLA!
                             # Boylece 2 satirdan 1 satira dusuldugunde eski satir artiklari ekranda kalmaz.

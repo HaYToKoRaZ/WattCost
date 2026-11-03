@@ -1,0 +1,44 @@
+﻿# UTF-8
+#
+# Windows Version Info for WattCost HaYTooL
+#
+VSVersionInfo(
+  ffi=FixedFileInfo(
+    filevers=(6, 0, 0, 0),
+    prodvers=(6, 0, 0, 0),
+    mask=0x3f,
+    flags=0x0,
+    OS=0x40004,
+    fileType=0x1,
+    subtype=0x0,
+    date=(0, 0)
+    ),
+  kids=[
+    StringFileInfo(
+      [
+      StringTable(
+        '040904b0',
+        [StringStruct('CompanyName', 'HaYTooL'),
+        StringStruct('FileDescription', 'WattCost HaYTooL - PC Power & Cost Monitor'),
+        StringStruct('FileVersion', '6.0.0.0'),
+        StringStruct('InternalName', 'WattCost. HaYTooL'),
+        StringStruct('LegalCopyright', 'Copyright (C) 2026 HaYTooL. All rights reserved.'),
+        StringStruct('OriginalFilename', 'WattCost. HaYTooL.exe'),
+        StringStruct('ProductName', 'WattCost HaYTooL'),
+        StringStruct('ProductVersion', '6.0'),
+        StringStruct('Comments', 'Real-Time PC Power & Cost Monitor with RTSS OSD')]),
+      StringTable(
+        '041f04b0',
+        [StringStruct('CompanyName', 'HaYTooL'),
+        StringStruct('FileDescription', 'WattCost HaYTooL - PC Power & Cost Monitor'),
+        StringStruct('FileVersion', '6.0.0.0'),
+        StringStruct('InternalName', 'WattCost. HaYTooL'),
+        StringStruct('LegalCopyright', 'Copyright (C) 2026 HaYTooL. All rights reserved.'),
+        StringStruct('OriginalFilename', 'WattCost. HaYTooL.exe'),
+        StringStruct('ProductName', 'WattCost HaYTooL'),
+        StringStruct('ProductVersion', '6.0'),
+        StringStruct('Comments', 'Real-Time PC Power & Cost Monitor with RTSS OSD')])
+      ]), 
+    VarFileInfo([VarStruct('Translation', [1033, 1200, 1055, 1200])])
+  ]
+)

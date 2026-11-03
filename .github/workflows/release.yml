@@ -66,7 +66,7 @@ jobs:
               --distpath "dist/temp_dist" `
               --workpath "dist/temp_build" `
               --specpath "dist" `
-              "main/main.py"
+              "main/app.py"
 
           # Tasi ve kok dosyalari yerlestir
           Copy-Item "dist/temp_dist/WattCost. HaYTooL/*" -Destination "dist" -Recurse -Force

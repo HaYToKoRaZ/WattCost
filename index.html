@@ -1,136 +1,849 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr" class="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WattCost HaYTooL • PC Wall Power & Electricity Cost Tracker</title>
+  <title>WattCost HaYTooL • PC Priz Güç & Donanım Telemetri Süiti</title>
+  <meta name="description" content="WattCost HaYTooL: Windows için gerçekçi priz gücü (Watt), elektrik maliyeti (TL/$) takibi, RTSS oyun içi göstergesi ve akıllı güç planı otomasyonu.">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  
+  <!-- External Libraries: Lenis Smooth Scroll + Lucide Icons + GSAP -->
+  <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.14/dist/lenis.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+
   <style>
     :root {
-      --bg: #090d16;
-      --card-bg: #0f172a;
+      --bg: #05070e;
+      --card-bg: rgba(13, 18, 36, 0.7);
+      --card-border: rgba(30, 41, 59, 0.8);
       --primary: #0ea5e9;
+      --primary-glow: rgba(14, 165, 233, 0.25);
       --accent: #10b981;
+      --accent-glow: rgba(16, 185, 129, 0.2);
+      --danger: #f43f5e;
       --text: #f8fafc;
-      --muted: #94a3b8;
-      --border: #1e293b;
+      --text-muted: #94a3b8;
+      --font-main: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
     }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: initial; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      background: radial-gradient(circle at top, #131d33 0%, var(--bg) 100%);
+      background-color: var(--bg);
       color: var(--text);
-      min-height: 100vh;
+      font-family: var(--font-main);
+      overflow-x: hidden;
+      line-height: 1.6;
+      background-image: 
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(14, 165, 233, 0.15), transparent),
+        radial-gradient(circle at 100% 60%, rgba(16, 185, 129, 0.08), transparent 40%),
+        radial-gradient(circle at 0% 80%, rgba(244, 63, 94, 0.06), transparent 40%);
+    }
+
+    /* Ambient noise & grid */
+    .bg-grid {
+      position: fixed;
+      inset: 0;
+      background-size: 40px 40px;
+      background-image: 
+        linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Navigation */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      z-index: 100;
+      backdrop-filter: blur(16px);
+      background: rgba(5, 7, 14, 0.75);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 1rem 2rem;
       display: flex;
-      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      text-decoration: none;
+      color: var(--text);
+      font-weight: 800;
+      font-size: 1.25rem;
+      letter-spacing: -0.02em;
+    }
+    .brand-icon {
+      width: 34px;
+      height: 34px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      border-radius: 8px;
+      display: flex;
       align-items: center;
       justify-content: center;
-      padding: 2rem;
+      color: #fff;
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      list-style: none;
+    }
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.95rem;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: #fff; }
+    .lang-switcher {
+      display: flex;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 999px;
+      padding: 0.25rem;
+      gap: 0.25rem;
+    }
+    .lang-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 0.35rem 0.75rem;
+      border-radius: 999px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .lang-btn.active {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    /* Container */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Hero Section */
+    .hero {
+      padding: 9rem 0 5rem;
       text-align: center;
     }
-    .container {
-      max-width: 800px;
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 3rem 2rem;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-    }
-    .badge {
-      display: inline-block;
-      background: rgba(14, 165, 233, 0.15);
-      color: var(--primary);
-      border: 1px solid rgba(14, 165, 233, 0.3);
+    .badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--primary-glow);
+      border: 1px solid rgba(14, 165, 233, 0.4);
       padding: 0.35rem 1rem;
       border-radius: 999px;
       font-size: 0.85rem;
       font-weight: 600;
-      margin-bottom: 1.5rem;
+      color: var(--primary);
+      margin-bottom: 2rem;
     }
-    h1 {
-      font-size: 2.75rem;
+    .hero h1 {
+      font-size: clamp(2.5rem, 6vw, 4.25rem);
       font-weight: 800;
-      letter-spacing: -0.025em;
-      margin-bottom: 1rem;
-      background: linear-gradient(135deg, #ffffff 0%, #94a3b8 100%);
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      margin-bottom: 1.5rem;
+      background: linear-gradient(180deg, #ffffff 0%, #94a3b8 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
-    p {
-      color: var(--muted);
-      font-size: 1.15rem;
-      line-height: 1.6;
-      margin-bottom: 2rem;
+    .hero p {
+      font-size: clamp(1.1rem, 2vw, 1.35rem);
+      color: var(--text-muted);
+      max-width: 780px;
+      margin: 0 auto 2.5rem;
+      font-weight: 400;
     }
-    .features {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    .cta-group {
+      display: flex;
+      justify-content: center;
       gap: 1rem;
-      margin-bottom: 2.5rem;
-      text-align: left;
-    }
-    .feat-card {
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid var(--border);
-      padding: 1.25rem;
-      border-radius: 10px;
-    }
-    .feat-card h3 {
-      font-size: 1rem;
-      margin-bottom: 0.5rem;
-      color: var(--primary);
-    }
-    .feat-card p {
-      font-size: 0.85rem;
-      margin: 0;
-      color: var(--muted);
+      flex-wrap: wrap;
     }
     .btn {
-      display: inline-block;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.85rem 2rem;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      cursor: pointer;
+    }
+    .btn-primary {
       background: var(--primary);
       color: #fff;
-      font-weight: 600;
-      padding: 0.85rem 2rem;
-      border-radius: 8px;
-      text-decoration: none;
-      transition: background 0.2s, transform 0.2s;
+      box-shadow: 0 0 30px var(--primary-glow);
     }
-    .btn:hover {
+    .btn-primary:hover {
       background: #0284c7;
       transform: translateY(-2px);
+      box-shadow: 0 0 40px rgba(14, 165, 233, 0.4);
     }
-    footer {
+    .btn-outline {
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    .btn-outline:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.3);
+      transform: translateY(-2px);
+    }
+
+    /* Live Telemetry Bar Mockup */
+    .telemetry-banner {
+      margin: 3.5rem auto 0;
+      max-width: 900px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 1.25rem 2rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1.5rem;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+    }
+    .metric-item {
+      text-align: left;
+    }
+    .metric-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 0.25rem;
+    }
+    .metric-val {
+      font-family: var(--font-mono);
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #fff;
+    }
+    .metric-val span {
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: var(--primary);
+    }
+
+    /* Gallery & Showcase Tabs */
+    .section-title {
+      text-align: center;
+      margin-bottom: 3.5rem;
+    }
+    .section-title h2 {
+      font-size: clamp(2rem, 4vw, 2.75rem);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.75rem;
+    }
+    .section-title p {
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .tabs-wrapper {
       margin-top: 2rem;
-      font-size: 0.85rem;
-      color: #64748b;
+    }
+    .tab-nav {
+      display: flex;
+      justify-content: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      margin-bottom: 2rem;
+    }
+    .tab-btn {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+      padding: 0.65rem 1.5rem;
+      border-radius: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.2s;
+    }
+    .tab-btn.active, .tab-btn:hover {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+      box-shadow: 0 0 20px var(--primary-glow);
+    }
+    .tab-panel {
+      display: none;
+      animation: fadeIn 0.4s ease forwards;
+    }
+    .tab-panel.active { display: block; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .screenshot-frame {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7);
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .screenshot-frame:hover {
+      transform: scale(1.01);
+    }
+    .screenshot-frame img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    .screenshot-meta {
+      padding: 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(10, 15, 30, 0.8);
+      border-top: 1px solid var(--card-border);
+    }
+    .screenshot-meta h3 { font-size: 1.15rem; font-weight: 700; color: #fff; }
+    .screenshot-meta p { font-size: 0.9rem; color: var(--text-muted); margin-top: 0.25rem; }
+
+    /* Features Grid */
+    .features-section {
+      padding: 6rem 0;
+    }
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.75rem;
+    }
+    .feature-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 2rem;
+      backdrop-filter: blur(10px);
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--primary), transparent);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .feature-card:hover {
+      border-color: rgba(14, 165, 233, 0.4);
+      transform: translateY(-4px);
+    }
+    .feature-card:hover::before { opacity: 1; }
+    .feature-icon {
+      width: 48px;
+      height: 48px;
+      background: rgba(14, 165, 233, 0.1);
+      border: 1px solid rgba(14, 165, 233, 0.3);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary);
+      margin-bottom: 1.25rem;
+    }
+    .feature-card h3 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+    }
+    .feature-card p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    /* Formula Banner */
+    .formula-box {
+      margin: 4rem 0;
+      background: linear-gradient(135deg, rgba(14, 165, 233, 0.08), rgba(16, 185, 129, 0.05));
+      border: 1px solid rgba(14, 165, 233, 0.2);
+      border-radius: 16px;
+      padding: 2.5rem;
+      text-align: center;
+    }
+    .formula-code {
+      font-family: var(--font-mono);
+      font-size: clamp(1rem, 2.5vw, 1.4rem);
+      color: #38bdf8;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 1rem 1.5rem;
+      border-radius: 10px;
+      display: inline-block;
+      margin: 1rem 0;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .formula-note {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      max-width: 700px;
+      margin: 0 auto;
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 3rem 0;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      background: rgba(5, 7, 14, 0.9);
+    }
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .footer-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .footer-links a:hover { color: #fff; }
+
+    @media (max-width: 768px) {
+      nav { padding: 1rem; }
+      .nav-links { display: none; }
+      .hero { padding: 7rem 0 3rem; }
+      .telemetry-banner { grid-template-columns: 1fr 1fr; }
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <span class="badge">⚡ WattCost HaYTooL • v5.9</span>
-    <h1>Real-Time PC Power & Cost Tracker</h1>
-    <p>Calibrated wall socket power telemetry, live electricity tariff calculation, RTSS in-game OSD, and intelligent power plan automation for Windows 10 & 11.</p>
-    
-    <div class="features">
-      <div class="feat-card">
-        <h3>🔌 Wall Power Model</h3>
-        <p>Real-time chassis, CPU, GPU, and peripheral power calculation.</p>
+
+  <div class="bg-grid"></div>
+
+  <!-- Navbar -->
+  <nav>
+    <a href="#" class="brand">
+      <div class="brand-icon">
+        <i data-lucide="zap"></i>
       </div>
-      <div class="feat-card">
-        <h3>🎮 RTSS In-Game HUD</h3>
-        <p>Live FPS, Watts, and ₺/hr cost overlay directly in your games.</p>
+      <span>WattCost HaYTooL</span>
+    </a>
+
+    <ul class="nav-links">
+      <li><a href="#features" data-i18n="nav_features">Özellikler</a></li>
+      <li><a href="#showcase" data-i18n="nav_showcase">Arayüz</a></li>
+      <li><a href="#formula" data-i18n="nav_formula">Güç Formülü</a></li>
+      <li><a href="https://github.com/HaYToKoRaZ/WattCost" target="_blank">GitHub</a></li>
+    </ul>
+
+    <!-- TR / EN Dil Seçimi -->
+    <div class="lang-switcher">
+      <button class="lang-btn active" id="btn-tr" onclick="setLang('tr')">🇹🇷 TR</button>
+      <button class="lang-btn" id="btn-en" onclick="setLang('en')">🇬🇧 EN</button>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="container">
+      <div class="badge-pill">
+        <i data-lucide="sparkles" style="width: 16px; height: 16px;"></i>
+        <span data-i18n="hero_badge">WattCost HaYTooL v6.0 Yayında</span>
       </div>
-      <div class="feat-card">
-        <h3>🤖 SmartSwitch Engine</h3>
-        <p>Automated 4-tier power plan and monitor Hz scaling based on workload.</p>
+
+      <h1 data-i18n="hero_title">PC Priz Gücünü ve Faturanı Canlı Takip Et</h1>
+      <p data-i18n="hero_desc">Donanım sensörlerinden anlık priz tüketimini (Watt) ve elektrik maliyetini hesaplayan, oyun içi RTSS göstergesi sunan ve akıllı güç planları yöneten yeni nesil Windows telemetri süiti.</p>
+
+      <div class="cta-group">
+        <a href="https://github.com/HaYToKoRaZ/WattCost/releases" class="btn btn-primary">
+          <i data-lucide="download"></i>
+          <span data-i18n="btn_download">Hemen İndir (v6.0 EXE)</span>
+        </a>
+        <a href="https://github.com/HaYToKoRaZ/WattCost" class="btn btn-outline" target="_blank">
+          <i data-lucide="github"></i>
+          <span>GitHub Kaynak Kodu</span>
+        </a>
+      </div>
+
+      <!-- Real-Time Telemetry Bar Mockup -->
+      <div class="telemetry-banner">
+        <div class="metric-item">
+          <div class="metric-label" data-i18n="metric_wall_power">PRİZDEN ÇEKİLEN GÜÇ</div>
+          <div class="metric-val" id="val-power">224 <span>W</span></div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label" data-i18n="metric_cost_hour">SAATLİK MALİYET</div>
+          <div class="metric-val" id="val-cost">1.09 <span>TL/sa</span></div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label" data-i18n="metric_hz">EKRAN TAZELENME</div>
+          <div class="metric-val">144 <span>Hz</span></div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label" data-i18n="metric_plan">GÜÇ DÜZENİ</div>
+          <div class="metric-val" style="font-size: 1.25rem; color: #10b981;" data-i18n="metric_plan_val">⚡ Maksimum</div>
+        </div>
       </div>
     </div>
+  </section>
 
-    <a href="https://github.com/HaYToKoRaZ/WattCost" class="btn">View on GitHub</a>
-  </div>
+  <!-- Showcase / Screenshots Tabs -->
+  <section id="showcase" class="showcase-section" style="padding: 4rem 0;">
+    <div class="container">
+      <div class="section-title">
+        <h2 data-i18n="showcase_title">Arayüz ve Yetenekler</h2>
+        <p data-i18n="showcase_sub">Uygulamanın sunduğu zengin sekmeleri ve kontrol alanlarını inceleyin.</p>
+      </div>
 
+      <div class="tabs-wrapper">
+        <div class="tab-nav">
+          <button class="tab-btn active" onclick="switchTab('tab-cost')">
+            <i data-lucide="activity"></i> <span data-i18n="tab_cost_title">Maliyet & OSD</span>
+          </button>
+          <button class="tab-btn" onclick="switchTab('tab-power')">
+            <i data-lucide="cpu"></i> <span data-i18n="tab_power_title">Güç Planları</span>
+          </button>
+          <button class="tab-btn" onclick="switchTab('tab-smart')">
+            <i data-lucide="bot"></i> <span data-i18n="tab_smart_title">Akıllı Geçiş & Hz</span>
+          </button>
+          <button class="tab-btn" onclick="switchTab('tab-compare')">
+            <i data-lucide="scale"></i> <span data-i18n="tab_compare_title">Plan Kıyaslama</span>
+          </button>
+          <button class="tab-btn" onclick="switchTab('tab-settings')">
+            <i data-lucide="settings"></i> <span data-i18n="tab_settings_title">Tarife & Ayarlar</span>
+          </button>
+        </div>
+
+        <!-- 1. Cost & OSD -->
+        <div id="tab-cost" class="tab-panel active">
+          <div class="screenshot-frame">
+            <img src="assets/images/01_cost_osd_tab.jpg" alt="Cost and RTSS OSD Tab">
+            <div class="screenshot-meta">
+              <div>
+                <h3 data-i18n="meta_cost_h">Anlık Priz Maliyeti ve Oyun İçi RTSS OSD</h3>
+                <p data-i18n="meta_cost_p">Oyun oynarken ekranda canlı priz gücü, FPS, harcanan para ve kulaklık şarjı.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Power Plan -->
+        <div id="tab-power" class="tab-panel">
+          <div class="screenshot-frame">
+            <img src="assets/images/02_power_plan_tab.png" alt="Power Plan Tab">
+            <div class="screenshot-meta">
+              <div>
+                <h3 data-i18n="meta_power_h">Tek Tıkla Güç Planı Değiştirme</h3>
+                <p data-i18n="meta_power_p">WattCost özel optimize profilleri, AMD Ryzen güç planları ve gizli Windows ayarları.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. Smart Switch -->
+        <div id="tab-smart" class="tab-panel">
+          <div class="screenshot-frame">
+            <img src="assets/images/03_smart_switch_tab.jpg" alt="Smart Switch Tab">
+            <div class="screenshot-meta">
+              <div>
+                <h3 data-i18n="meta_smart_h">SmartSwitch: Yüke Göre 4 Kademeli Otomasyon</h3>
+                <p data-i18n="meta_smart_p">Sistem boştayken tasarruf ve düşük Hz; oyuna girildiğinde anında maksimum güç ve yüksek Hz.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. Comparison -->
+        <div id="tab-compare" class="tab-panel">
+          <div class="screenshot-frame">
+            <img src="assets/images/04_comparison_tab.jpg" alt="Comparison Tab">
+            <div class="screenshot-meta">
+              <div>
+                <h3 data-i18n="meta_compare_h">Güç Planı Parametre Kıyaslama Matrisi</h3>
+                <p data-i18n="meta_compare_p">Frekans sınırları, core parking ve işlemci soğutma politikalarının detaylı dökümü.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. Settings -->
+        <div id="tab-settings" class="tab-panel">
+          <div class="screenshot-frame">
+            <img src="assets/images/05_settings_dialog.jpg" alt="Settings Dialog">
+            <div class="screenshot-meta">
+              <div>
+                <h3 data-i18n="meta_settings_h">Tarife, Donanım ve Sistem Tepsisi Ayarları</h3>
+                <p data-i18n="meta_settings_p">Elektrik birim fiyatı, monitör ve modem watt değerleri, Zalman pompa ekran yönetimi.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Grid -->
+  <section id="features" class="features-section">
+    <div class="container">
+      <div class="section-title">
+        <h2 data-i18n="feat_title">Neden WattCost HaYTooL?</h2>
+        <p data-i18n="feat_sub">Gelişmiş donanım telemetrisi, sıfır sürücü yükü ve eşsiz optimizasyon özellikleri.</p>
+      </div>
+
+      <div class="feature-grid">
+        <div class="feature-card">
+          <div class="feature-icon"><i data-lucide="gauge"></i></div>
+          <h3 data-i18n="feat_1_h">Kalibre Priz Modeli</h3>
+          <p data-i18n="feat_1_p">AMD Ryzen 7 5800X, RTX 5070 12GB ve full ARGB sistemde bizzat wattmetre ile test edilerek formüle edilmiş hassas priz çekişi.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon"><i data-lucide="gamepad-2"></i></div>
+          <h3 data-i18n="feat_2_h">RTSS Oyun İçi Gösterge (HUD)</h3>
+          <p data-i18n="feat_2_p">RivaTuner Statistics Server üzerinden oyun ekranına canlı Watt, Saatlik Maliyet, FPS ve donanım istatistiklerini yansıtır.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon"><i data-lucide="sliders"></i></div>
+          <h3 data-i18n="feat_3_h">SmartSwitch & Otomatik Hz</h3>
+          <p data-i18n="feat_3_p">Boştayken sistemi ve monitörü tasarrufa alır; oyun algılandığında tek bir gecikme olmadan en yüksek kademeye ve Hz değerine fırlar.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon"><i data-lucide="headphones"></i></div>
+          <h3 data-i18n="feat_4_h">SteelSeries & Bluetooth Kulaklık</h3>
+          <p data-i18n="feat_4_p">Ağır üretici yazılımlarına gerek kalmadan USB HID ve Windows Bluetooth üzerinden kulaklık şarjını ve kalan süreyi okur.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon"><i data-lucide="droplet"></i></div>
+          <h3 data-i18n="feat_5_h">Zalman LCD Pompa Entegrasyonu</h3>
+          <p data-i18n="feat_5_p">Sıvı soğutmanın LCD ekranına CPU/GPU sıcaklıklarını aktarır. Kendi yazılımından kat kat daha az CPU ve RAM tüketir.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon"><i data-lucide="shield-check"></i></div>
+          <h3 data-i18n="feat_6_h">Sürücüsüz & Güvenli Mimari</h3>
+          <p data-i18n="feat_6_p">Kernel sürücüsü yüklemez. Telemetriyi MSI Afterburner veya AIDA64 paylaşımlı belleğinden (Shared Memory) ultra hızlı ve güvenle okur.</p>
+        </div>
+      </div>
+
+      <!-- Formula Callout -->
+      <div id="formula" class="formula-box">
+        <h3 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem;" data-i18n="form_title">Priz Gücü Hesaplama Modeli</h3>
+        <p data-i18n="form_sub" style="color: var(--text-muted);">Yazılımsal sensör yanılgılarını ortadan kaldıran kalibre edilmiş priz güç formülü:</p>
+        <div class="formula-code">
+          Kasa Gücü (W) = 46.7 + 1.632 × CPU_Watt + 1.170 × GPU_Watt
+        </div>
+        <p class="formula-note" data-i18n="form_note">
+          Toplam Priz Gücü = Kasa Gücü + Monitörler + Modem + Harici Çevre Birimleri. Donanım PSU verim kaybı ve anakart taban tüketimi hesaba dahil edilir.
+        </p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Footer -->
   <footer>
-    &copy; 2026 HaYTooL Studio. All rights reserved.
+    <div class="container">
+      <div class="footer-links">
+        <a href="https://github.com/HaYToKoRaZ/WattCost" target="_blank">GitHub</a>
+        <a href="https://github.com/HaYToKoRaZ/WattCost/releases" target="_blank" data-i18n="foot_releases">Sürümler</a>
+        <a href="https://github.com/HaYToKoRaZ/WattCost/blob/main/README.md" target="_blank" data-i18n="foot_docs">Dokümantasyon</a>
+      </div>
+      <p>&copy; 2026 WattCost HaYTooL • Developed with ❤️ by <b>HaYTooL Studio</b></p>
+    </div>
   </footer>
+
+  <!-- Scripts -->
+  <script>
+    // Initialize Lucide Icons
+    lucide.createIcons();
+
+    // Initialize Lenis Smooth Scroll (LUME award-winning standard)
+    const lenis = new Lenis({
+      duration: 1.2,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      smoothWheel: true,
+      wheelMultiplier: 1,
+    });
+    function raf(time) {
+      lenis.raf(time);
+      requestAnimationFrame(raf);
+    }
+    requestAnimationFrame(raf);
+
+    // Tab switching
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
+      
+      const targetBtn = event.currentTarget;
+      const targetPanel = document.getElementById(tabId);
+      if (targetBtn && targetPanel) {
+        targetBtn.classList.add('active');
+        targetPanel.classList.add('active');
+      }
+    }
+
+    // Dual Language Dictionary (TR & EN)
+    const i18n = {
+      tr: {
+        nav_features: "Özellikler",
+        nav_showcase: "Arayüz",
+        nav_formula: "Güç Formülü",
+        hero_badge: "WattCost HaYTooL v6.0 Yayında",
+        hero_title: "PC Priz Gücünü ve Faturanı Canlı Takip Et",
+        hero_desc: "Donanım sensörlerinden anlık priz tüketimini (Watt) ve elektrik maliyetini hesaplayan, oyun içi RTSS göstergesi sunan ve akıllı güç planları yöneten yeni nesil Windows telemetri süiti.",
+        btn_download: "Hemen İndir (v6.0 EXE)",
+        metric_wall_power: "PRİZDEN ÇEKİLEN GÜÇ",
+        metric_cost_hour: "SAATLİK MALİYET",
+        metric_hz: "EKRAN TAZELENME",
+        metric_plan: "GÜÇ DÜZENİ",
+        metric_plan_val: "⚡ Maksimum",
+        showcase_title: "Arayüz ve Yetenekler",
+        showcase_sub: "Uygulamanın sunduğu zengin sekmeleri ve kontrol alanlarını inceleyin.",
+        tab_cost_title: "Maliyet & OSD",
+        tab_power_title: "Güç Planları",
+        tab_smart_title: "Akıllı Geçiş & Hz",
+        tab_compare_title: "Plan Kıyaslama",
+        tab_settings_title: "Tarife & Ayarlar",
+        meta_cost_h: "Anlık Priz Maliyeti ve Oyun İçi RTSS OSD",
+        meta_cost_p: "Oyun oynarken ekranda canlı priz gücü, FPS, harcanan para ve kulaklık şarjı.",
+        meta_power_h: "Tek Tıkla Güç Planı Değiştirme",
+        meta_power_p: "WattCost özel optimize profilleri, AMD Ryzen güç planları ve gizli Windows ayarları.",
+        meta_smart_h: "SmartSwitch: Yüke Göre 4 Kademeli Otomasyon",
+        meta_smart_p: "Sistem boştayken tasarruf ve düşük Hz; oyuna girildiğinde anında maksimum güç ve yüksek Hz.",
+        meta_compare_h: "Güç Planı Parametre Kıyaslama Matrisi",
+        meta_compare_p: "Frekans sınırları, core parking ve işlemci soğutma politikalarının detaylı dökümü.",
+        meta_settings_h: "Tarife, Donanım ve Sistem Tepsisi Ayarları",
+        meta_settings_p: "Elektrik birim fiyatı, monitör ve modem watt değerleri, Zalman pompa ekran yönetimi.",
+        feat_title: "Neden WattCost HaYTooL?",
+        feat_sub: "Gelişmiş donanım telemetrisi, sıfır sürücü yükü ve eşsiz optimizasyon özellikleri.",
+        feat_1_h: "Kalibre Priz Modeli",
+        feat_1_p: "AMD Ryzen 7 5800X, RTX 5070 12GB ve full ARGB sistemde bizzat wattmetre ile test edilerek formüle edilmiş hassas priz çekişi.",
+        feat_2_h: "RTSS Oyun İçi Gösterge (HUD)",
+        feat_2_p: "RivaTuner Statistics Server üzerinden oyun ekranına canlı Watt, Saatlik Maliyet, FPS ve donanım istatistiklerini yansıtır.",
+        feat_3_h: "SmartSwitch & Otomatik Hz",
+        feat_3_p: "Boştayken sistemi ve monitörü tasarrufa alır; oyun algılandığında tek bir gecikme olmadan en yüksek kademeye ve Hz değerine fırlar.",
+        feat_4_h: "SteelSeries & Bluetooth Kulaklık",
+        feat_4_p: "Ağır üretici yazılımlarına gerek kalmadan USB HID ve Windows Bluetooth üzerinden kulaklık şarjını ve kalan süreyi okur.",
+        feat_5_h: "Zalman LCD Pompa Entegrasyonu",
+        feat_5_p: "Sıvı soğutmanın LCD ekranına CPU/GPU sıcaklıklarını aktarır. Kendi yazılımından kat kat daha az CPU ve RAM tüketir.",
+        feat_6_h: "Sürücüsüz & Güvenli Mimari",
+        feat_6_p: "Kernel sürücüsü yüklemez. Telemetriyi MSI Afterburner veya AIDA64 paylaşımlı belleğinden (Shared Memory) ultra hızlı ve güvenle okur.",
+        form_title: "Priz Gücü Hesaplama Modeli",
+        form_sub: "Yazılımsal sensör yanılgılarını ortadan kaldıran kalibre edilmiş priz güç formülü:",
+        form_note: "Toplam Priz Gücü = Kasa Gücü + Monitörler + Modem + Harici Çevre Birimleri. Donanım PSU verim kaybı ve anakart taban tüketimi hesaba dahil edilir.",
+        foot_releases: "Sürümler",
+        foot_docs: "Dokümantasyon"
+      },
+      en: {
+        nav_features: "Features",
+        nav_showcase: "Interface",
+        nav_formula: "Power Model",
+        hero_badge: "WattCost HaYTooL v6.0 Released",
+        hero_title: "Real-Time PC Wall Power & Electricity Cost Tracker",
+        hero_desc: "A next-gen Windows telemetry and automation suite computing real-time wall socket wattage, live financial costs, in-game RTSS HUD, and dynamic power plan scaling.",
+        btn_download: "Download Now (v6.0 EXE)",
+        metric_wall_power: "WALL POWER DRAW",
+        metric_cost_hour: "HOURLY EXPENSE",
+        metric_hz: "DISPLAY REFRESH",
+        metric_plan: "ACTIVE POWER PLAN",
+        metric_plan_val: "⚡ Maximum",
+        showcase_title: "Interface & Capabilities",
+        showcase_sub: "Explore the comprehensive dashboards and telemetry features.",
+        tab_cost_title: "Cost & OSD",
+        tab_power_title: "Power Plans",
+        tab_smart_title: "SmartSwitch & Hz",
+        tab_compare_title: "Plan Comparison",
+        tab_settings_title: "Tariff & Settings",
+        meta_cost_h: "Live Wall Power & In-Game RTSS Overlay",
+        meta_cost_p: "Real-time socket power, FPS, live financial cost, and headset battery during gameplay.",
+        meta_power_h: "One-Click Power Profile Management",
+        meta_power_p: "Pre-tuned WattCost profiles, AMD Ryzen power plans, and unlocked Windows hidden attributes.",
+        meta_smart_h: "SmartSwitch: Automated 4-Tier Scaling",
+        meta_smart_p: "Ultra-eco power and lower Hz while idle; instant jump to maximum performance and high refresh rates during gaming.",
+        meta_compare_h: "Power Scheme Comparison Matrix",
+        meta_compare_p: "Side-by-side breakdown of frequency limits, core parking, and cooling policies.",
+        meta_settings_h: "Tariff, External Devices & Tray Options",
+        meta_settings_p: "Electricity unit pricing, monitor & router wattages, and Zalman LCD pump controls.",
+        feat_title: "Why WattCost HaYTooL?",
+        feat_sub: "Zero kernel drivers, high-precision telemetry, and unmatched automation tools.",
+        feat_1_h: "Calibrated Wall Socket Model",
+        feat_1_p: "Bench-tested with a physical kill-a-watt meter on an AMD Ryzen 7 5800X, RTX 5070 12GB, 32GB RAM system with full ARGB lighting.",
+        feat_2_h: "RTSS In-Game HUD Overlay",
+        feat_2_p: "Renders live Watts, hourly cost (₺/$/€), session expense, FPS, and hardware stats over your games.",
+        feat_3_h: "SmartSwitch & Dynamic Hz",
+        feat_3_p: "Scales power profiles and monitor refresh rates based on CPU/GPU workloads and 3D game execution.",
+        feat_4_h: "SteelSeries & Bluetooth Headset",
+        feat_4_p: "Reads wireless headset battery percentage and operational duration directly via USB HID and Windows Bluetooth.",
+        feat_5_h: "Zalman LCD Pump Sync",
+        feat_5_p: "Streams real-time CPU/GPU temperatures to Zalman Alpha2 LCD pumps using a fraction of the OEM utility's RAM/CPU.",
+        feat_6_h: "Zero-Driver Safe Architecture",
+        feat_6_p: "No invasive ring-0 kernel drivers. Safely queries telemetry via MSI Afterburner and AIDA64 Shared Memory.",
+        form_title: "Wall Power Telemetry Formula",
+        form_sub: "Calibrated formula eliminating software-only sensor discrepancies:",
+        form_note: "Total Wall Power = Chassis Draw + Displays + Network Modem + Peripherals. Includes motherboard base loads and PSU efficiency losses.",
+        foot_releases: "Releases",
+        foot_docs: "Documentation"
+      }
+    };
+
+    function setLang(lang) {
+      document.getElementById('btn-tr').classList.toggle('active', lang === 'tr');
+      document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+      document.documentElement.lang = lang;
+
+      const dict = i18n[lang];
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (dict[key]) {
+          el.textContent = dict[key];
+        }
+      });
+
+      // Update unit in telemetry bar
+      const costEl = document.getElementById('val-cost');
+      if (costEl) {
+        costEl.innerHTML = lang === 'tr' ? '1.09 <span>TL/sa</span>' : '$0.04 <span>/hr</span>';
+      }
+    }
+  </script>
 </body>
 </html>

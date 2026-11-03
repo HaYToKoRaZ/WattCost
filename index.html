@@ -6,7 +6,41 @@
   <title>WattCost HaYTooL • PC Priz Güç & Donanım Telemetri Süiti</title>
   <meta name="description" content="WattCost HaYTooL: Windows için gerçekçi priz gücü (Watt), elektrik maliyeti (TL/$) takibi, RTSS oyun içi göstergesi ve akıllı güç planı otomasyonu.">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
-  <link rel="icon" type="image/png" href="assets/images/app_icon.png">
+  <link rel="icon" type="image/png" href="app_icon.png">
+  <link rel="apple-touch-icon" href="app_icon.png">
+
+  <!-- Open Graph & Twitter SEO Meta Tags -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="WattCost HaYTooL • PC Priz Güç & Donanım Telemetri Süiti">
+  <meta property="og:description" content="Gerçekçi priz gücü (Watt), elektrik faturası maliyeti takibi, oyun içi RTSS göstergesi ve akıllı güç planı yönetimi.">
+  <meta property="og:image" content="https://haytokoraz.github.io/WattCost/assets/images/01_cost_osd_tab.jpg">
+  <meta property="og:url" content="https://haytokoraz.github.io/WattCost/">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="WattCost HaYTooL • PC Wall Power & Hardware Telemetry">
+  <meta name="twitter:description" content="Real-time wall power draw, electricity cost calculation, in-game RTSS OSD and dynamic power plan automation.">
+  <meta name="twitter:image" content="https://haytokoraz.github.io/WattCost/assets/images/01_cost_osd_tab.jpg">
+
+  <!-- Schema.org SoftwareApplication JSON-LD (Google & AI Search Rich Snippet) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "WattCost HaYTooL",
+    "operatingSystem": "Windows 10, Windows 11",
+    "applicationCategory": "UtilitiesApplication",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "description": "Windows için gerçek zamanlı priz tüketimi (Watt) ve elektrik maliyeti hesaplama aracı. RTSS OSD desteği ve SmartSwitch dinamik güç planı otomasyonu.",
+    "softwareRequirements": "MSI Afterburner or AIDA64",
+    "author": {
+      "@type": "Organization",
+      "name": "HaYTooL Studio"
+    }
+  }
+  </script>
   
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -476,7 +510,7 @@
   <nav>
     <a href="#" class="brand">
       <div class="brand-icon">
-        <img src="assets/images/app_icon.png" alt="WattCost HaYTooL Icon">
+        <img src="app_icon.png" alt="WattCost HaYTooL Icon" onerror="this.onerror=null; this.src='assets/images/app_icon.png';">
       </div>
       <span>WattCost HaYTooL</span>
     </a>
@@ -506,7 +540,7 @@
     <div class="container">
       <div class="badge-pill">
         <i data-lucide="sparkles" style="width: 16px; height: 16px;"></i>
-        <span data-i18n="hero_badge">WattCost HaYTooL v6.0 Yayında</span>
+        <span data-i18n="hero_badge">Yeni Nesil Donanım Telemetrisi</span>
       </div>
 
       <h1 data-i18n="hero_title">PC Priz Gücünü ve Faturanı Canlı Takip Et</h1>
@@ -515,7 +549,7 @@
       <div class="cta-group">
         <a href="https://github.com/HaYToKoRaZ/WattCost/releases" class="btn btn-primary">
           <i data-lucide="download"></i>
-          <span data-i18n="btn_download">Hemen İndir (v6.0 EXE)</span>
+          <span data-i18n="btn_download">Hemen İndir (Windows EXE)</span>
         </a>
         <a href="https://github.com/HaYToKoRaZ/WattCost" class="btn btn-outline" target="_blank">
           <i data-lucide="github"></i>
@@ -751,10 +785,10 @@
         nav_features: "Özellikler",
         nav_showcase: "Arayüz",
         nav_formula: "Güç Formülü",
-        hero_badge: "WattCost HaYTooL v6.0 Yayında",
+        hero_badge: "Yeni Nesil Donanım Telemetrisi",
         hero_title: "PC Priz Gücünü ve Faturanı Canlı Takip Et",
         hero_desc: "Donanım sensörlerinden anlık priz tüketimini (Watt) ve elektrik maliyetini hesaplayan, oyun içi RTSS göstergesi sunan ve akıllı güç planları yöneten yeni nesil Windows telemetri süiti.",
-        btn_download: "Hemen İndir (v6.0 EXE)",
+        btn_download: "Hemen İndir (Windows EXE)",
         metric_wall_power: "PRİZDEN ÇEKİLEN GÜÇ",
         metric_cost_hour: "SAATLİK MALİYET",
         metric_hz: "EKRAN TAZELENME",
@@ -801,10 +835,10 @@
         nav_features: "Features",
         nav_showcase: "Interface",
         nav_formula: "Power Model",
-        hero_badge: "WattCost HaYTooL v6.0 Released",
+        hero_badge: "Next-Gen Hardware Telemetry",
         hero_title: "Real-Time PC Wall Power & Electricity Cost Tracker",
         hero_desc: "A next-gen Windows telemetry and automation suite computing real-time wall socket wattage, live financial costs, in-game RTSS HUD, and dynamic power plan scaling.",
-        btn_download: "Download Now (v6.0 EXE)",
+        btn_download: "Download Now (Windows EXE)",
         metric_wall_power: "WALL POWER DRAW",
         metric_cost_hour: "HOURLY EXPENSE",
         metric_hz: "DISPLAY REFRESH",

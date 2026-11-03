@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WattCost HaYTooL • PC Wall Power & Electricity Cost Tracker</title>
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: #0f172a;
+      --primary: #0ea5e9;
+      --accent: #10b981;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --border: #1e293b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: radial-gradient(circle at top, #131d33 0%, var(--bg) 100%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      text-align: center;
+    }
+    .container {
+      max-width: 800px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 3rem 2rem;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    }
+    .badge {
+      display: inline-block;
+      background: rgba(14, 165, 233, 0.15);
+      color: var(--primary);
+      border: 1px solid rgba(14, 165, 233, 0.3);
+      padding: 0.35rem 1rem;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+    }
+    h1 {
+      font-size: 2.75rem;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, #ffffff 0%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    p {
+      color: var(--muted);
+      font-size: 1.15rem;
+      line-height: 1.6;
+      margin-bottom: 2rem;
+    }
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2.5rem;
+      text-align: left;
+    }
+    .feat-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      padding: 1.25rem;
+      border-radius: 10px;
+    }
+    .feat-card h3 {
+      font-size: 1rem;
+      margin-bottom: 0.5rem;
+      color: var(--primary);
+    }
+    .feat-card p {
+      font-size: 0.85rem;
+      margin: 0;
+      color: var(--muted);
+    }
+    .btn {
+      display: inline-block;
+      background: var(--primary);
+      color: #fff;
+      font-weight: 600;
+      padding: 0.85rem 2rem;
+      border-radius: 8px;
+      text-decoration: none;
+      transition: background 0.2s, transform 0.2s;
+    }
+    .btn:hover {
+      background: #0284c7;
+      transform: translateY(-2px);
+    }
+    footer {
+      margin-top: 2rem;
+      font-size: 0.85rem;
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <span class="badge">⚡ WattCost HaYTooL • v5.9</span>
+    <h1>Real-Time PC Power & Cost Tracker</h1>
+    <p>Calibrated wall socket power telemetry, live electricity tariff calculation, RTSS in-game OSD, and intelligent power plan automation for Windows 10 & 11.</p>
+    
+    <div class="features">
+      <div class="feat-card">
+        <h3>🔌 Wall Power Model</h3>
+        <p>Real-time chassis, CPU, GPU, and peripheral power calculation.</p>
+      </div>
+      <div class="feat-card">
+        <h3>🎮 RTSS In-Game HUD</h3>
+        <p>Live FPS, Watts, and ₺/hr cost overlay directly in your games.</p>
+      </div>
+      <div class="feat-card">
+        <h3>🤖 SmartSwitch Engine</h3>
+        <p>Automated 4-tier power plan and monitor Hz scaling based on workload.</p>
+      </div>
+    </div>
+
+    <a href="https://github.com/HaYToKoRaZ/WattCost" class="btn">View on GitHub</a>
+  </div>
+
+  <footer>
+    &copy; 2026 HaYTooL Studio. All rights reserved.
+  </footer>
+</body>
+</html>

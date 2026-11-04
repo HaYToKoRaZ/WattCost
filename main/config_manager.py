@@ -11,7 +11,7 @@ import ctypes
 import configparser
 
 SINGLE_INSTANCE_PORT = 47892
-APP_VERSION = "6.1"
+APP_VERSION = "6.2"
 
 def apply_dark_titlebar(window):
     """Windows 10/11 DWM Immersive Dark Mode uygulayarak beyaz pencere parlamasını önler."""

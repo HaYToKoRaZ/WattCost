@@ -4,7 +4,7 @@
 ; ==============================================================================
 
 #ifndef AppVersion
-  #define AppVersion "6.0"
+  #define AppVersion "6.2"
 #endif
 
 #define MyAppName "WattCost HaYTooL"
@@ -32,7 +32,7 @@ AllowNoIcons=yes
 OutputDir=release_assets
 OutputBaseFilename=WattCost-HaYTooL-v{#AppVersion}-Setup
 SetupIconFile=main\app_icon.ico
-UninstallDisplayIcon={app}\main\app_icon.ico
+UninstallDisplayIcon={app}\{#MyAppExeName}
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
@@ -58,17 +58,20 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: checkedonce
 
 [Files]
-; Tum derlenmis dist dosyalarini hedef kurulum klasorune yukle
-Source: "dist\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+; Tek Bağımsız EXE
+Source: "build_out\WattCost. HaYTooL.exe"; DestDir: "{app}"; Flags: ignoreversion
+
+; Dil Dosyaları
+Source: "main\languages\*"; DestDir: "{app}\languages"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 ; Baslat Menusu Kisayollari
-Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\main\app_icon.ico"
+Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{group}\Web Sitesi (HaYTooL)"; Filename: "{#MyAppURL}"
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
 
 ; Masaustu Kisayolu
-Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\main\app_icon.ico"; Tasks: desktopicon
+Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent

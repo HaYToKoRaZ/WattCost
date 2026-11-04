@@ -1141,7 +1141,8 @@ class PowerTrackerApp(
                         elif phase < half_cycle:
                             self.zalman.set_blank(True)
                             rem = int(half_cycle - phase) + 1
-                            z_tag = f"{tr('zalman_blank_to_gpu', 'Boşluk (GPU\'ya)')} [{rem}s]"
+                            lbl = tr("zalman_blank_to_gpu", "Boşluk (GPU'ya)")
+                            z_tag = f"{lbl} [{rem}s]"
                             is_in_blank = True
                         elif phase < (half_cycle + temp_dur):
                             self.zalman.set_blank(False)
@@ -1152,7 +1153,8 @@ class PowerTrackerApp(
                         else:
                             self.zalman.set_blank(True)
                             rem = int(total_cycle - phase) + 1
-                            z_tag = f"{tr('zalman_blank_to_cpu', 'Boşluk (CPU\'ya)')} [{rem}s]"
+                            lbl = tr("zalman_blank_to_cpu", "Boşluk (CPU'ya)")
+                            z_tag = f"{lbl} [{rem}s]"
                             is_in_blank = True
                     else:
                         self.zalman.set_blank(False)

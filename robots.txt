@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://haytokoraz.github.io/WattCost/sitemap.xml
+Sitemap: https://haytool.online/WattCost/sitemap.xml

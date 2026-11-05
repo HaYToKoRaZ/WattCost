@@ -13,11 +13,11 @@
   <meta name="IndexNow" content="3e529478e2104fc6ab5a38fe45c3dff4">
   
   <!-- Canonical URL & Hreflang Tags -->
-  <link rel="canonical" href="https://haytokoraz.github.io/WattCost/">
-  <link rel="alternate" hreflang="x-default" href="https://haytokoraz.github.io/WattCost/">
-  <link rel="alternate" hreflang="en" href="https://haytokoraz.github.io/WattCost/#en">
-  <link rel="alternate" hreflang="tr" href="https://haytokoraz.github.io/WattCost/#tr">
-  <link rel="sitemap" type="application/xml" title="Sitemap" href="https://haytokoraz.github.io/WattCost/sitemap.xml">
+  <link rel="canonical" href="https://haytool.online/WattCost/">
+  <link rel="alternate" hreflang="x-default" href="https://haytool.online/WattCost/">
+  <link rel="alternate" hreflang="en" href="https://haytool.online/WattCost/#en">
+  <link rel="alternate" hreflang="tr" href="https://haytool.online/WattCost/#tr">
+  <link rel="sitemap" type="application/xml" title="Sitemap" href="https://haytool.online/WattCost/sitemap.xml">
   
   <link rel="icon" type="image/x-icon" href="favicon.ico">
   <link rel="icon" type="image/png" href="app_icon.png">
@@ -27,10 +27,10 @@
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="WattCost HaYTooL">
   <meta property="og:locale" content="en_US">
-  <meta property="og:url" content="https://haytokoraz.github.io/WattCost/">
+  <meta property="og:url" content="https://haytool.online/WattCost/">
   <meta property="og:title" content="WattCost HaYTooL • Real-Time PC Wall Power & Electricity Cost Tracker">
   <meta property="og:description" content="Accurate wall socket power consumption (Watts) & live electricity cost monitor for Windows with in-game RTSS OSD and intelligent power plan automation.">
-  <meta property="og:image" content="https://haytokoraz.github.io/WattCost/assets/images/01_cost_osd_tab.jpg">
+  <meta property="og:image" content="https://haytool.online/WattCost/assets/images/01_cost_osd_tab.jpg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="WattCost HaYTooL Dashboard and RTSS OSD Preview">
@@ -39,10 +39,10 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@HaYTooL">
   <meta name="twitter:creator" content="@HaYTo">
-  <meta name="twitter:url" content="https://haytokoraz.github.io/WattCost/">
+  <meta name="twitter:url" content="https://haytool.online/WattCost/">
   <meta name="twitter:title" content="WattCost HaYTooL • Real-Time PC Wall Power & Electricity Cost Tracker">
   <meta name="twitter:description" content="Accurate wall socket power consumption (Watts) & live electricity cost monitor for Windows with in-game RTSS OSD and intelligent power plan automation.">
-  <meta name="twitter:image" content="https://haytokoraz.github.io/WattCost/assets/images/01_cost_osd_tab.jpg">
+  <meta name="twitter:image" content="https://haytool.online/WattCost/assets/images/01_cost_osd_tab.jpg">
   <meta name="twitter:image:alt" content="WattCost HaYTooL Live Telemetry & In-Game HUD">
 
   <!-- Schema.org SoftwareApplication JSON-LD (Google & AI Search Rich Snippet) -->
@@ -71,12 +71,7 @@
   }
   </script>
   
-  <!-- Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" media="print" onload="this.media='all'">
-  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"></noscript>
+  <!-- System Font Stack - Zero Latency, Zero Network Requests -->
 
   <style>
     html {
@@ -94,8 +89,8 @@
       --danger: #f43f5e;
       --text: #f8fafc;
       --text-muted: #94a3b8;
-      --font-main: 'Plus Jakarta Sans', -apple-system, sans-serif;
-      --font-mono: 'JetBrains Mono', monospace;
+      --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, "Cascadia Code", "Roboto Mono", Menlo, Consolas, monospace;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -399,6 +394,8 @@
       border: 1px solid var(--card-border);
       border-radius: 16px;
       overflow: hidden;
+      max-width: 680px;
+      margin: 0 auto;
       box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7);
       transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
@@ -648,8 +645,8 @@
         <div id="tab-cost" class="tab-panel active">
           <div class="screenshot-frame">
             <picture>
-              <source type="image/webp" srcset="assets/images/01_cost_osd_tab-640.webp 640w, assets/images/01_cost_osd_tab.webp 900w" sizes="(max-width: 768px) 100vw, 640px">
-              <img src="assets/images/01_cost_osd_tab-640.webp" alt="Cost and RTSS OSD Tab" width="640" height="479" fetchpriority="high">
+              <source type="image/webp" srcset="assets/images/01_cost_osd_tab-640.webp 640w, assets/images/01_cost_osd_tab.webp 900w" sizes="(max-width: 680px) 100vw, 640px">
+              <img src="assets/images/01_cost_osd_tab-640.webp" alt="Cost and RTSS OSD Tab" width="640" height="479" loading="lazy" decoding="async">
             </picture>
             <div class="screenshot-meta">
               <div>
@@ -664,7 +661,7 @@
         <div id="tab-power" class="tab-panel">
           <div class="screenshot-frame">
             <picture>
-              <source type="image/webp" srcset="assets/images/02_power_plan_tab-640.webp 640w, assets/images/02_power_plan_tab.webp 900w" sizes="(max-width: 768px) 100vw, 640px">
+              <source type="image/webp" srcset="assets/images/02_power_plan_tab-640.webp 640w, assets/images/02_power_plan_tab.webp 900w" sizes="(max-width: 680px) 100vw, 640px">
               <img src="assets/images/02_power_plan_tab-640.webp" alt="Power Plan Tab" width="640" height="479" loading="lazy">
             </picture>
             <div class="screenshot-meta">
@@ -680,7 +677,7 @@
         <div id="tab-smart" class="tab-panel">
           <div class="screenshot-frame">
             <picture>
-              <source type="image/webp" srcset="assets/images/03_smart_switch_tab-640.webp 640w, assets/images/03_smart_switch_tab.webp 900w" sizes="(max-width: 768px) 100vw, 640px">
+              <source type="image/webp" srcset="assets/images/03_smart_switch_tab-640.webp 640w, assets/images/03_smart_switch_tab.webp 900w" sizes="(max-width: 680px) 100vw, 640px">
               <img src="assets/images/03_smart_switch_tab-640.webp" alt="Smart Switch Tab" width="640" height="479" loading="lazy">
             </picture>
             <div class="screenshot-meta">
@@ -696,7 +693,7 @@
         <div id="tab-compare" class="tab-panel">
           <div class="screenshot-frame">
             <picture>
-              <source type="image/webp" srcset="assets/images/04_comparison_tab-640.webp 640w, assets/images/04_comparison_tab.webp 900w" sizes="(max-width: 768px) 100vw, 640px">
+              <source type="image/webp" srcset="assets/images/04_comparison_tab-640.webp 640w, assets/images/04_comparison_tab.webp 900w" sizes="(max-width: 680px) 100vw, 640px">
               <img src="assets/images/04_comparison_tab-640.webp" alt="Comparison Tab" width="640" height="479" loading="lazy">
             </picture>
             <div class="screenshot-meta">
@@ -712,7 +709,7 @@
         <div id="tab-settings" class="tab-panel">
           <div class="screenshot-frame">
             <picture>
-              <source type="image/webp" srcset="assets/images/05_settings_dialog-640.webp 640w, assets/images/05_settings_dialog.webp 900w" sizes="(max-width: 768px) 100vw, 640px">
+              <source type="image/webp" srcset="assets/images/05_settings_dialog-640.webp 640w, assets/images/05_settings_dialog.webp 900w" sizes="(max-width: 680px) 100vw, 640px">
               <img src="assets/images/05_settings_dialog-640.webp" alt="Settings Dialog" width="640" height="479" loading="lazy">
             </picture>
             <div class="screenshot-meta">

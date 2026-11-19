@@ -51,6 +51,7 @@
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "WattCost HaYTooL",
+    "softwareVersion": "7.6",
     "operatingSystem": "Windows 10, Windows 11",
     "applicationCategory": "UtilitiesApplication",
     "offers": {
@@ -58,7 +59,8 @@
       "price": "0",
       "priceCurrency": "USD"
     },
-    "description": "High-precision Windows telemetry suite computing real-time PC wall socket power consumption (Watts) and financial electricity expense with RTSS in-game OSD and SmartSwitch dynamic power plan scaling.",
+    "description": "High-precision Windows telemetry suite computing real-time PC wall socket power consumption (Watts) and financial electricity expense with RTSS in-game OSD, SmartSwitch dynamic power plan scaling, GitHub Gist cloud backup, and multi-user --hide daemon.",
+    "featureList": "Calibrated Wall Power Formula, Weekly/Monthly/Yearly Billing Report, Portable Format-Proof History DB, GitHub Gist Cloud Backup with DPAPI, Light/Dark/Matrix Themes & Themed Tray, SmartSwitch Dynamic Hz, Global Hotkeys, Silent Multi-User --hide Mode, SteelSeries & Bluetooth Headset Battery, Zalman Alpha2 LCD Pump",
     "softwareRequirements": "MSI Afterburner or AIDA64",
     "author": {
       "@type": "Person",
@@ -94,7 +96,6 @@
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: initial; }
     body {
       background-color: var(--bg);
       color: var(--text);
@@ -621,19 +622,19 @@
 
       <div class="tabs-wrapper">
         <div class="tab-nav">
-          <button class="tab-btn active" onclick="switchTab('tab-cost')">
+          <button class="tab-btn active" onclick="switchTab('tab-cost', this)">
             <svg class="lucide lucide-activity" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg> <span data-i18n="tab_cost_title">Maliyet & OSD</span>
           </button>
-          <button class="tab-btn" onclick="switchTab('tab-power')">
+          <button class="tab-btn" onclick="switchTab('tab-power', this)">
             <svg class="lucide lucide-cpu" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="16" x="4" y="4" rx="2"/><rect width="6" height="6" x="9" y="9" rx="1"/><path d="M15 2v2"/><path d="M15 20v2"/><path d="M2 15h2"/><path d="M2 9h2"/><path d="M20 15h2"/><path d="M20 9h2"/><path d="M9 2v2"/><path d="M9 20v2"/></svg> <span data-i18n="tab_power_title">Güç Planları</span>
           </button>
-          <button class="tab-btn" onclick="switchTab('tab-smart')">
+          <button class="tab-btn" onclick="switchTab('tab-smart', this)">
             <svg class="lucide lucide-bot" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg> <span data-i18n="tab_smart_title">Akıllı Geçiş & Hz</span>
           </button>
-          <button class="tab-btn" onclick="switchTab('tab-compare')">
+          <button class="tab-btn" onclick="switchTab('tab-compare', this)">
             <svg class="lucide lucide-scale" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg> <span data-i18n="tab_compare_title">Plan Kıyaslama</span>
           </button>
-          <button class="tab-btn" onclick="switchTab('tab-settings')">
+          <button class="tab-btn" onclick="switchTab('tab-settings', this)">
             <svg class="lucide lucide-settings" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg> <span data-i18n="tab_settings_title">Tarife & Ayarlar</span>
           </button>
         </div>
@@ -751,6 +752,24 @@
           <h3 data-i18n="feat_6_h">Sürücüsüz & Güvenli Mimari</h3>
           <p data-i18n="feat_6_p">Kernel sürücüsü yüklemez. Telemetriyi MSI Afterburner veya AIDA64 paylaşımlı belleğinden (Shared Memory) ultra hızlı ve güvenle okur.</p>
         </div>
+
+        <div class="feature-card">
+          <div class="feature-icon"><svg class="lucide lucide-bar-chart-3" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg></div>
+          <h3 data-i18n="feat_7_h">Haftalık / Aylık / Yıllık Fatura Raporu</h3>
+          <p data-i18n="feat_7_p">Geçen hafta Salı dahil gün bazlı kWh ve ücret analizi. EXE yanındaki taşınabilir JSON veritabanı Windows formatından sonra kaldığı yerden devam eder.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon"><svg class="lucide lucide-cloud-upload" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg></div>
+          <h3 data-i18n="feat_8_h">GitHub Gist Yedeği & DPAPI Güvenliği</h3>
+          <p data-i18n="feat_8_p">Ayarlarınızı tek tıkla veya otomatik olarak Gizli Gist'e yedekleyin, önizleyin ve geri yükleyin. Yerel token Windows DPAPI ile şifrelenir.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon"><svg class="lucide lucide-terminal" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg></div>
+          <h3 data-i18n="feat_9_h">3 Tema, CLI & Gizli --hide Modu</h3>
+          <p data-i18n="feat_9_p">Açık/Koyu/Matrix temalar ve temalı sistem tepsisi; K1–K4 global kısayollar, tam CLI otomasyonu ve ikincil Windows hesapları için simgesiz --hide modu.</p>
+        </div>
       </div>
 
       <!-- Formula Callout -->
@@ -795,11 +814,11 @@
 
 
     // Tab switching
-    function switchTab(tabId) {
+    function switchTab(tabId, btnEl) {
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
       document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
-      
-      const targetBtn = event.currentTarget;
+
+      const targetBtn = btnEl || (typeof event !== 'undefined' && event.currentTarget);
       const targetPanel = document.getElementById(tabId);
       if (targetBtn && targetPanel) {
         targetBtn.classList.add('active');
@@ -854,6 +873,12 @@
         feat_5_p: "Sıvı soğutmanın LCD ekranına CPU/GPU sıcaklıklarını aktarır. Kendi yazılımından kat kat daha az CPU ve RAM tüketir.",
         feat_6_h: "Sürücüsüz & Güvenli Mimari",
         feat_6_p: "Kernel sürücüsü yüklemez. Telemetriyi MSI Afterburner veya AIDA64 paylaşımlı belleğinden (Shared Memory) ultra hızlı ve güvenle okur.",
+        feat_7_h: "Haftalık / Aylık / Yıllık Fatura Raporu",
+        feat_7_p: "Geçen hafta Salı dahil gün bazlı kWh ve ücret analizi. EXE yanındaki taşınabilir JSON veritabanı Windows formatından sonra kaldığı yerden devam eder.",
+        feat_8_h: "GitHub Gist Yedeği & DPAPI Güvenliği",
+        feat_8_p: "Ayarlarınızı tek tıkla veya otomatik olarak Gizli Gist'e yedekleyin, önizleyin ve geri yükleyin. Yerel token Windows DPAPI ile şifrelenir.",
+        feat_9_h: "3 Tema, CLI & Gizli --hide Modu",
+        feat_9_p: "Açık/Koyu/Matrix temalar ve temalı sistem tepsisi; K1–K4 global kısayollar, tam CLI otomasyonu ve ikincil Windows hesapları için simgesiz --hide modu.",
         form_title: "Priz Gücü Hesaplama Modeli",
         form_sub: "Yazılımsal sensör yanılgılarını ortadan kaldıran kalibre edilmiş priz güç formülü:",
         form_note: "Toplam Priz Gücü = Kasa Gücü + Monitörler + Modem + Harici Çevre Birimleri. Donanım PSU verim kaybı ve anakart taban tüketimi hesaba dahil edilir.",
@@ -906,6 +931,12 @@
         feat_5_p: "Streams real-time CPU/GPU temperatures to Zalman Alpha2 LCD pumps using a fraction of the OEM utility's RAM/CPU.",
         feat_6_h: "Zero-Driver Safe Architecture",
         feat_6_p: "No invasive ring-0 kernel drivers. Safely queries telemetry via MSI Afterburner and AIDA64 Shared Memory.",
+        feat_7_h: "Weekly / Monthly / Yearly Billing Report",
+        feat_7_p: "Day-by-day kWh and cost analytics (including lookups like Last Tuesday). Portable JSON next to the EXE resumes seamlessly even after an OS format.",
+        feat_8_h: "GitHub Gist Cloud Backup & DPAPI",
+        feat_8_p: "Automatically or manually back up, preview, and restore settings to a Secret Gist. Local tokens are encrypted with Windows DPAPI.",
+        feat_9_h: "3 Themes, CLI & Silent --hide Mode",
+        feat_9_p: "Light/Dark/Matrix themes + themed tray menu, K1–K4 global hotkeys, full CLI automation, and tray-free --hide daemon for secondary Windows users.",
         form_title: "Wall Power Telemetry Formula",
         form_sub: "Calibrated formula eliminating software-only sensor discrepancies:",
         form_note: "Total Wall Power = Chassis Draw + Displays + Network Modem + Peripherals. Includes motherboard base loads and PSU efficiency losses.",

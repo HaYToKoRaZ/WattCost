@@ -3,7 +3,7 @@
 # ⚡ WattCost HaYTooL
 ### Real-Time PC Wall Power, Electricity Cost Tracker & Smart Automation Engine
 
-[![GitHub release](https://img.shields.io/badge/Release-v7.6-0ea5e9?style=for-the-badge&logo=github)](https://github.com/HaYToKoRaZ/WattCost/releases)
+[![GitHub release](https://img.shields.io/badge/Release-v8.0-0ea5e9?style=for-the-badge&logo=github)](https://github.com/HaYToKoRaZ/WattCost/releases)
 [![Platform](https://img.shields.io/badge/Platform-Windows%2010%20%7C%2011-0078D6?style=for-the-badge&logo=windows)](https://www.microsoft.com/windows)
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-10B981?style=for-the-badge)](LICENSE)

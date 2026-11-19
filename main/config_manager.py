@@ -15,7 +15,7 @@ import urllib.error
 import urllib.parse
 
 SINGLE_INSTANCE_PORT = 47892
-APP_VERSION = "7.9"
+APP_VERSION = "8.0"
 
 def is_windows_dark_mode() -> bool:
     """Windows sistem temasının Koyu (Dark) modda olup olmadığını okur."""

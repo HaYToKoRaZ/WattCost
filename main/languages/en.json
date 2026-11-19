@@ -777,5 +777,13 @@
   "cli_desc_hide1": "Starts in silent mode and activates SmartSwitch Tier 1 (Ultra Power Saver) power plan + monitor Hz settings (hide1..hide4).",
   "cli_desc_hide3": "Starts in silent mode and activates SmartSwitch Tier 3 (High Performance) power plan + monitor Hz settings.",
   "cli_desc_hideauto": "Starts in silent mode and runs 4-tier SmartSwitch dynamic power plan + Hz automation in the background.",
-  "cli_hide_help": "Runs headless with no window or system tray icon (for Windows Task Scheduler on secondary user accounts)."
+  "cli_hide_help": "Runs headless with no window or system tray icon (for Windows Task Scheduler on secondary user accounts).",
+  "cli_banner_title": "⚡ WattCost HaYTooL • CLI Power & Hardware Command Interface",
+  "cli_err_prefix": "ERROR",
+  "cli_group_exit": "🛑 Exit Application (--exit / exit)",
+  "cli_desc_exit": "Gracefully flushes data and closes the running WattCost window or silent (hide) background daemon.",
+  "cli_ok_exit": "WattCost shutdown signal sent (data flushed).",
+  "cli_err_not_running": "No running WattCost instance was found.",
+  "cli_help_title": "USAGE:",
+  "cli_help_cmds": "COMMANDS & OPTIONS:"
 }

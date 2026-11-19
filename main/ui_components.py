@@ -1892,6 +1892,12 @@ class UIComponentsMixin:
                 ]
             },
             {
+                "group": _t("cli_group_exit", "🛑 Uygulamayı Kapatma (--exit / exit)"),
+                "items": [
+                    ('"WattCost. HaYTooL.exe" --exit', _t("cli_desc_exit", "Çalışan WattCost penceresini veya gizli arka plan (hide) sürecini verileri kaydederek güvenle kapatır.")),
+                ]
+            },
+            {
                 "group": _t("cli_group_help", "❓ CLI Yardım Ekranı (-h, --help)"),
                 "items": [
                     ("WattCost. HaYTooL.exe --help", _t("cli_desc_help", "Konsolda tüm CLI komutlarını ve seçeneklerini listeler.")),

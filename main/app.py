@@ -76,11 +76,17 @@ def run_hidden_daemon(hide_target=None):
     if ctypes.windll.kernel32.GetLastError() == 183:  # ERROR_ALREADY_EXISTS
         return
 
+    stop_evt = ctypes.windll.kernel32.CreateEventW(None, True, False, "Local\\WattCostHiddenStop")
     stop_flag = [False]
     atexit.register(HistoryManager.flush_history)
 
     def _on_stop(*_args):
         stop_flag[0] = True
+        if stop_evt:
+            try:
+                ctypes.windll.kernel32.SetEvent(stop_evt)
+            except Exception:
+                pass
         HistoryManager.flush_history()
 
     for sig_name in ("SIGINT", "SIGTERM", "SIGBREAK"):
@@ -108,7 +114,12 @@ def run_hidden_daemon(hide_target=None):
 
     try:
         while not stop_flag[0]:
-            _time.sleep(1.0)
+            if stop_evt:
+                wait_rc = ctypes.windll.kernel32.WaitForSingleObject(stop_evt, 1000)
+                if wait_rc == 0:  # WAIT_OBJECT_0: --exit sinyali geldi
+                    break
+            else:
+                _time.sleep(1.0)
             now = _time.time()
             dt = max(0.1, min(10.0, now - last_t))
             last_t = now
@@ -192,6 +203,11 @@ def run_hidden_daemon(hide_target=None):
         if mutex:
             try:
                 ctypes.windll.kernel32.CloseHandle(mutex)
+            except Exception:
+                pass
+        if stop_evt:
+            try:
+                ctypes.windll.kernel32.CloseHandle(stop_evt)
             except Exception:
                 pass
 
@@ -1840,6 +1856,13 @@ class PowerTrackerApp(
                 hourly = getattr(self, '_last_hourly', 0.0)
                 smart_on = bool(self.config.get("smart_switch_enabled", False))
                 return f"OK: Aktif Plan: {p_name}; Priz Gucu: {watt:.0f} W; Saatlik: {hourly:.2f} TL/sa; Akilli Mod: {'Acik' if smart_on else 'Kapali'}"
+
+            elif cmd == "exit":
+                if hasattr(self, 'quit_app'):
+                    self.root.after(50, self.quit_app)
+                else:
+                    self.root.after(50, self.root.quit)
+                return "OK: Exiting"
 
             return "ERR: Unknown command"
         except Exception as e:

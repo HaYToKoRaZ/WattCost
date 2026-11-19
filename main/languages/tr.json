@@ -777,5 +777,13 @@
   "cli_desc_hide1": "Gizli modda başlar ve Akıllı Geçiş Kademe 1 (Ultra Tasarruf) güç planı + monitör Hz ayarlarını aktif eder (hide1..hide4).",
   "cli_desc_hide3": "Gizli modda başlar ve Akıllı Geçiş Kademe 3 (Yüksek Performans) güç planı + monitör Hz ayarlarını aktif eder.",
   "cli_desc_hideauto": "Gizli modda başlar ve 4 kademeli Akıllı Geçiş (güç planı + Hz) otomasyonunu arka planda dinamik çalıştırır.",
-  "cli_hide_help": "Pencere ve sistem tepsisi simgesi açmadan arka planda çalışır (diğer Windows hesapları için Görev Zamanlayıcı)."
+  "cli_hide_help": "Pencere ve sistem tepsisi simgesi açmadan arka planda çalışır (diğer Windows hesapları için Görev Zamanlayıcı).",
+  "cli_banner_title": "⚡ WattCost HaYTooL • CLI Güç & Donanım Komut Arayüzü",
+  "cli_err_prefix": "HATA",
+  "cli_group_exit": "🛑 Uygulamayı Kapatma (--exit / exit)",
+  "cli_desc_exit": "Çalışan WattCost penceresini veya gizli arka plan (hide) sürecini verileri kaydederek güvenle kapatır.",
+  "cli_ok_exit": "WattCost kapatma sinyali gönderildi (veriler kaydedildi).",
+  "cli_err_not_running": "Arka planda çalışan bir WattCost örneği bulunamadı.",
+  "cli_help_title": "KULLANIM:",
+  "cli_help_cmds": "KOMUTLAR VE SEÇENEKLER:"
 }

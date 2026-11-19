@@ -55,9 +55,10 @@ def _enable_vt_mode():
 _enable_vt_mode()
 
 def print_banner():
+    title = _t("cli_banner_title", "⚡ WattCost HaYTooL • CLI Güç & Donanım Komut Arayüzü")
     banner = f"""
 {CLR_CYAN}{CLR_BOLD}========================================================================
- ⚡ WattCost HaYTooL • CLI Güç & Donanım Komut Arayüzü
+ {title}
 ========================================================================{CLR_RESET}"""
     print(banner)
 
@@ -162,6 +163,7 @@ VALID_CLI_FLAGS = [
     "--osd",
     "--tab",
     "--tray",
+    "--exit", "exit", "--quit", "quit",
     "--hide", "hide",
     "--hide1", "hide1",
     "--hide2", "hide2",
@@ -383,6 +385,31 @@ def cmd_tab(tab_name: str) -> bool:
     return True
 
 
+def cmd_exit():
+    """Çalışan GUI veya gizli (--hide) WattCost örneğini verileri kaydederek kapatır."""
+    print_banner()
+    closed_any = False
+
+    res = send_instance_command("CLI:exit")
+    if res and res.startswith("OK:"):
+        closed_any = True
+
+    try:
+        import ctypes
+        h_evt = ctypes.windll.kernel32.OpenEventW(0x0002, False, "Local\\WattCostHiddenStop")
+        if h_evt:
+            ctypes.windll.kernel32.SetEvent(h_evt)
+            ctypes.windll.kernel32.CloseHandle(h_evt)
+            closed_any = True
+    except Exception:
+        pass
+
+    if closed_any:
+        print(f"{CLR_GREEN}[OK] {_t('cli_ok_exit', 'WattCost kapatma sinyali gönderildi (veriler kaydedildi).')}{CLR_RESET}\n")
+    else:
+        print(f"{CLR_YELLOW}[!] {_t('cli_err_not_running', 'Arka planda çalışan bir WattCost örneği bulunamadı.')}{CLR_RESET}\n")
+
+
 def handle_cli_args() -> bool:
     """
     Komut satırı argümanlarını inceler.
@@ -396,27 +423,41 @@ def handle_cli_args() -> bool:
     if sys.argv[1].lower().lstrip("-") in ("watch", "hide", "hide1", "hide2", "hide3", "hide4", "hideauto", "hide-auto"):
         return False
 
+    # Uygulama ayarlarındaki dili CLI çıktıları için de başlat (TR / EN uyumu)
+    try:
+        from language_manager import LanguageManager
+        LanguageManager.get_instance().init_language(load_config_dict().get("language", "auto"))
+    except Exception:
+        pass
+
+    # Çıplak 'exit' / 'quit' argümanlarını '--exit' olarak kabul et
+    if sys.argv[1].lower() in ("exit", "quit"):
+        cmd_exit()
+        return True
+
     parser = argparse.ArgumentParser(
         prog="WattCost. HaYTooL.exe",
-        description="WattCost HaYTooL • PC Güç Planları, Akıllı Otomasyon ve Donanım CLI Yöneticisi",
+        description="WattCost HaYTooL CLI",
         add_help=False,
         exit_on_error=False
     )
 
-    parser.add_argument("-h", "--help", action="store_true", help="Bu yardım kılavuzunu görüntüler.")
-    parser.add_argument("-l", "--list-plans", action="store_true", help="Sistemdeki tüm güç planlarını listeler.")
-    parser.add_argument("-p", "--plan", type=str, metavar="<1-4|GUID|ad>", help="Güç planını değiştirir (1: Boşta, 2: Günlük, 3: Yüksek, 4: Maksimum).")
-    parser.add_argument("-s", "--smart", type=str, metavar="<on|off|toggle|status>", help="Akıllı Güç Modunu (SmartSwitch) açar, kapatır veya sorgular.")
-    parser.add_argument("--hz", type=int, metavar="<Hz>", help="Birincil monitörün yenileme hızını doğrudan ayarlar (örn. 60, 144, 165, 240).")
-    parser.add_argument("--status", action="store_true", help="Mevcut aktif güç planını ve otomasyon durumunu özetler.")
-    parser.add_argument("--osd", type=str, metavar="<on|off|toggle>", help="RivaTuner (RTSS) oyun içi göstergesini açar/kapatır.")
-    parser.add_argument("--tab", type=str, metavar="<cost|powerplan|smart|compare>", help=_t("cli_tab_help", "WattCost penceresini öne getirip belirtilen sekmeye geçer."))
+    parser.add_argument("-h", "--help", action="store_true")
+    parser.add_argument("-l", "--list-plans", action="store_true")
+    parser.add_argument("-p", "--plan", type=str)
+    parser.add_argument("-s", "--smart", type=str)
+    parser.add_argument("--hz", type=int)
+    parser.add_argument("--status", action="store_true")
+    parser.add_argument("--osd", type=str)
+    parser.add_argument("--tab", type=str)
+    parser.add_argument("--exit", "--quit", action="store_true")
 
     try:
         args, unknown = parser.parse_known_args()
     except (argparse.ArgumentError, SystemExit, Exception) as e:
         print_banner()
-        print(f"{CLR_RED}[HATA] {_t('cli_err_parse', 'Komut satırı argüman hatası: {err}').format(err=e)}{CLR_RESET}")
+        err_lbl = _t("cli_err_prefix", "HATA")
+        print(f"{CLR_RED}[{err_lbl}] {_t('cli_err_parse', 'Komut satırı argüman hatası: {err}').format(err=e)}{CLR_RESET}")
         if len(sys.argv) > 1:
             _print_suggestion(sys.argv[1], VALID_CLI_FLAGS)
         print(f" {_t('cli_hint_help', 'Tüm geçerli komutları görmek için: WattCost. HaYTooL.exe --help')}")
@@ -425,8 +466,9 @@ def handle_cli_args() -> bool:
     if unknown:
         print_banner()
         bad_arg = unknown[0]
+        err_lbl = _t("cli_err_prefix", "HATA")
         err_msg = _t("cli_err_unknown_arg", "Bilinmeyen veya hatalı komut: '{arg}'").format(arg=bad_arg)
-        print(f"{CLR_RED}[HATA] {err_msg}{CLR_RESET}")
+        print(f"{CLR_RED}[{err_lbl}] {err_msg}{CLR_RESET}")
         _print_suggestion(bad_arg, VALID_CLI_FLAGS)
         print(f" {_t('cli_hint_help', 'Tüm geçerli komutları görmek için: WattCost. HaYTooL.exe --help')}")
         return True
@@ -435,52 +477,44 @@ def handle_cli_args() -> bool:
     if args.help:
         print_banner()
         print(f"""
-{CLR_BOLD}KULLANIM:{CLR_RESET}
-  WattCost. HaYTooL.exe [SEÇENEKLER]
+{CLR_BOLD}{_t('cli_help_title', 'KULLANIM:')}{CLR_RESET}
+  WattCost. HaYTooL.exe [OPTIONS]
 
-{CLR_BOLD}KOMUTLAR VE SEÇENEKLER:{CLR_RESET}
-  {CLR_CYAN}-p, --plan <1-4 | GUID | ad>{CLR_RESET}
-      Güç planını anında değiştirir.
-      Örnekler:
-        WattCost.exe --plan 1         (Kademe 1: Ultra Tasarruf)
-        WattCost.exe --plan 4         (Kademe 4: Maksimum Performans)
-        WattCost.exe --plan "Dengeli"
-        WattCost.exe -p a8d8...-guid
+{CLR_BOLD}{_t('cli_help_cmds', 'KOMUTLAR VE SEÇENEKLER:')}{CLR_RESET}
+  {CLR_CYAN}-p, --plan <1-4 | GUID | name>{CLR_RESET}
+      {_t('cli_desc_plan_name', 'Plan adına göre kısmi eşleşmeyle güç planını uygular.')}
 
   {CLR_CYAN}-s, --smart <on | off | toggle | status>{CLR_RESET}
-      4 Kademeli Akıllı Güç Modunu (SmartSwitch) yönetir.
-      Örnekler:
-        WattCost.exe --smart on       (Otomasyonu aktif eder)
-        WattCost.exe --smart off      (Devre dışı bırakır)
-        WattCost.exe --smart toggle   (Açıksa kapatır, kapalıysa açar)
-        WattCost.exe --smart status   (Mevcut durumu sorgular)
+      {_t('cli_desc_smart_on', '4 kademeli dinamik akıllı geçiş otomasyonunu aktif eder.')}
 
-  {CLR_CYAN}--hz <Hz Değeri>{CLR_RESET}
-      Monitör yenileme hızını ayarlar.
-      Örnekler:
-        WattCost.exe --hz 60
-        WattCost.exe --hz 165
-        WattCost.exe --hz 240
+  {CLR_CYAN}--hz <Hz>{CLR_RESET}
+      {_t('cli_desc_hz', 'Birincil monitörün yenileme hızını doğrudan ayarlar (örn. 60, 144).')}
 
   {CLR_CYAN}-l, --list-plans{CLR_RESET}
-      Sistemde kayıtlı olan tüm güç planlarını listeler ve aktif olanı gösterir.
+      {_t('cli_desc_list_plans', 'Sistemdeki tüm kayıtlı güç planlarını listeler.')}
 
   {CLR_CYAN}--status{CLR_RESET}
-      Aktif güç planı, SmartSwitch, Hz ve priz gücü durumunu özetler.
+      {_t('cli_desc_status', 'Aktif güç planını, canlı priz gücünü (W) ve akıllı mod durumunu özetler.')}
 
   {CLR_CYAN}--osd <on | off | toggle>{CLR_RESET}
-      RivaTuner (RTSS) oyun içi OSD göstergesini açar / kapatır.
+      {_t('cli_desc_osd_toggle', 'Oyun içi RivaTuner (RTSS) bilgi ekranını açar veya kapatır.')}
 
   {CLR_CYAN}--tab <cost | powerplan | smart | compare>{CLR_RESET}
-      Açık WattCost penceresini öne getirip ilgili sekmeye geçer.
+      {_t('cli_desc_tab', 'Açık pencereyi öne getirip belirtilen sekmeye geçer (cost, powerplan, smart, compare).')}
 
   {CLR_CYAN}hide, --hide | hide1..hide4 | hideauto{CLR_RESET}
-      Pencere ve saat yanı tepsi simgesi açmadan arka planda çalışır (yeni INI oluşturmaz).
-      hide1..hide4 ilgili Akıllı Geçiş kademesinin Güç Planı + Monitör Hz ayarlarını uygulayarak başlar.
+      {_t('cli_desc_hide', 'Pencere ve saat yanı tepsi simgesi açmadan arka planda başlar (yeni INI oluşturmaz).')}
+
+  {CLR_CYAN}exit, --exit, --quit{CLR_RESET}
+      {_t('cli_desc_exit', 'Çalışan WattCost penceresini veya gizli arka plan (hide) sürecini verileri kaydederek güvenle kapatır.')}
 
   {CLR_CYAN}-h, --help{CLR_RESET}
-      Bu yardım ekranını görüntüler.
+      {_t('cli_desc_help', 'Konsolda tüm CLI komutlarını ve seçeneklerini listeler.')}
 """)
+        return True
+
+    if args.exit:
+        cmd_exit()
         return True
 
     if args.list_plans:

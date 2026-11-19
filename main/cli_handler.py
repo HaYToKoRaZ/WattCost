@@ -33,8 +33,15 @@ CLR_RED     = "\033[91m"
 CLR_BOLD    = "\033[1m"
 CLR_DIM     = "\033[2m"
 
+_vt_initialized = False
+
+
 def _enable_vt_mode():
     """Windows cmd / powershell için konsola bağlanır (AttachConsole) ve sanal terminal renklerini (ANSI) aktif eder."""
+    global _vt_initialized
+    if _vt_initialized:
+        return
+    _vt_initialized = True
     if os.name == 'nt':
         import ctypes
         kernel32 = ctypes.windll.kernel32
@@ -52,9 +59,9 @@ def _enable_vt_mode():
         if kernel32.GetConsoleMode(h_out, ctypes.byref(mode)):
             kernel32.SetConsoleMode(h_out, mode.value | 0x0004)
 
-_enable_vt_mode()
 
 def print_banner():
+    _enable_vt_mode()
     title = _t("cli_banner_title", "⚡ WattCost HaYTooL • CLI Güç & Donanım Komut Arayüzü")
     banner = f"""
 {CLR_CYAN}{CLR_BOLD}========================================================================
@@ -385,9 +392,8 @@ def cmd_tab(tab_name: str) -> bool:
     return True
 
 
-def cmd_exit():
+def cmd_exit(silent: bool = True):
     """Çalışan GUI veya gizli (--hide) WattCost örneğini verileri kaydederek kapatır."""
-    print_banner()
     closed_any = False
 
     ok, res = send_instance_command("CLI:exit")
@@ -404,10 +410,12 @@ def cmd_exit():
     except Exception:
         pass
 
-    if closed_any:
-        print(f"{CLR_GREEN}[OK] {_t('cli_ok_exit', 'WattCost kapatma sinyali gönderildi (veriler kaydedildi).')}{CLR_RESET}\n")
-    else:
-        print(f"{CLR_YELLOW}[!] {_t('cli_err_not_running', 'Arka planda çalışan bir WattCost örneği bulunamadı.')}{CLR_RESET}\n")
+    if not silent:
+        print_banner()
+        if closed_any:
+            print(f"{CLR_GREEN}[OK] {_t('cli_ok_exit', 'WattCost kapatma sinyali gönderildi (veriler kaydedildi).')}{CLR_RESET}\n")
+        else:
+            print(f"{CLR_YELLOW}[!] {_t('cli_err_not_running', 'Arka planda çalışan bir WattCost örneği bulunamadı.')}{CLR_RESET}\n")
 
 
 def handle_cli_args() -> bool:

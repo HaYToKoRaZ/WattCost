@@ -1885,7 +1885,10 @@ class UIComponentsMixin:
             {
                 "group": _t("cli_group_hide", "🕵️ Tam Gizli Çoklu-Kullanıcı Modu (hide / --hide)"),
                 "items": [
-                    ('"WattCost. HaYTooL.exe" --hide', _t("cli_desc_hide", "Pencere ve saat yanı tepsi simgesi açmadan yalnızca tüketim kaydı + Zalman pompa için arka planda başlar (yeni INI oluşturmaz).")),
+                    ('"WattCost. HaYTooL.exe" hide', _t("cli_desc_hide", "Pencere ve saat yanı tepsi simgesi açmadan yalnızca tüketim kaydı + Zalman pompa için arka planda başlar (yeni INI oluşturmaz).")),
+                    ('"WattCost. HaYTooL.exe" hide1', _t("cli_desc_hide1", "Gizli modda başlar ve Akıllı Geçiş Kademe 1 (Ultra Tasarruf) güç planı + monitör Hz ayarlarını aktif eder.")),
+                    ('"WattCost. HaYTooL.exe" hide3', _t("cli_desc_hide3", "Gizli modda başlar ve Akıllı Geçiş Kademe 3 (Yüksek Performans) güç planı + monitör Hz ayarlarını aktif eder.")),
+                    ('"WattCost. HaYTooL.exe" hideauto', _t("cli_desc_hideauto", "Gizli modda başlar ve 4 kademeli Akıllı Geçiş (güç planı + Hz) otomasyonunu arka planda dinamik çalıştırır.")),
                 ]
             },
             {

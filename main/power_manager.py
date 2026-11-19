@@ -1168,6 +1168,57 @@ class SmartAutoSwitcher:
         self.last_gpu = 0.0
         self.last_cpu = 0.0
 
+    def configure_from_dict(self, cfg: dict):
+        """INI sözlüğündeki tüm Akıllı Geçiş (güç planı GUID, Hz1/Hz2 ve eşik) ayarlarını yükler."""
+        self.enabled = bool(cfg.get("smart_switch_enabled", False))
+        self.set_tier_count(int(cfg.get("smart_switch_tier_count", 4) or 4))
+        self.hz_enabled = bool(cfg.get("smart_switch_hz_enabled", True))
+
+        self.tier1_plan_guid = str(cfg.get("smart_switch_t1_guid", "") or "")
+        self.tier2_plan_guid = str(cfg.get("smart_switch_t2_guid", "") or "")
+        self.tier3_plan_guid = str(cfg.get("smart_switch_t3_guid", "") or "")
+        self.tier4_plan_guid = str(cfg.get("smart_switch_t4_guid", "") or "")
+
+        for r in (1, 2, 3, 4):
+            setattr(self, f"tier{r}_hz", int(cfg.get(f"smart_switch_t{r}_hz", 0) or 0))
+            setattr(self, f"tier{r}_hz2", int(cfg.get(f"smart_switch_t{r}_hz2", 0) or 0))
+
+        self.tier2_gpu_pct = float(cfg.get("smart_switch_t2_gpu", 15.0) or 15.0)
+        self.tier2_cpu_pct = float(cfg.get("smart_switch_t2_cpu", 20.0) or 20.0)
+        self.tier3_gpu_pct = float(cfg.get("smart_switch_t3_gpu", 40.0) or 40.0)
+        self.tier3_cpu_pct = float(cfg.get("smart_switch_t3_cpu", 45.0) or 45.0)
+        self.tier4_gpu_pct = float(cfg.get("smart_switch_t4_gpu", 70.0) or 70.0)
+        self.tier4_cpu_pct = float(cfg.get("smart_switch_t4_cpu", 75.0) or 75.0)
+
+        self.watt_threshold = float(cfg.get("smart_switch_watt_threshold", 260.0) or 260.0)
+        self.use_rtss_trigger = bool(cfg.get("smart_switch_use_rtss", True))
+        self.use_watt_trigger = bool(cfg.get("smart_switch_use_watt", True))
+        self.trigger_seconds = int(cfg.get("smart_switch_trigger_sec", 2) or 2)
+        self.revert_seconds = int(cfg.get("smart_switch_revert_sec", 5) or 5)
+
+        # Eksik kademe GUID'leri varsa sistemdeki mevcut planlardan otomatik eşleştir
+        if not all(getattr(self, f"tier{r}_plan_guid", "") for r in (1, 2, 3, 4)):
+            try:
+                plans = PowerManagerService.get_power_plans()
+                if plans:
+                    def _match(keywords):
+                        for kw in keywords:
+                            for p in plans:
+                                if kw in p.name.lower():
+                                    return p.guid
+                        return ""
+                    if not self.tier1_plan_guid:
+                        self.tier1_plan_guid = _match(["ultra", "maksimum tasarruf", "maximum power saver", "power saver", "tasarruf", "eco"]) or plans[0].guid
+                    if not self.tier2_plan_guid:
+                        self.tier2_plan_guid = _match(["dengeli", "balanced"]) or self.tier1_plan_guid
+                    if not self.tier3_plan_guid:
+                        self.tier3_plan_guid = _match(["yüksek", "high performance", "high", "ryzen"]) or self.tier2_plan_guid
+                    if not self.tier4_plan_guid:
+                        self.tier4_plan_guid = _match(["maksimum performans", "maximum performance", "nihai", "ultimate"]) or self.tier3_plan_guid
+            except Exception:
+                pass
+        return self
+
     # ------------------------------------------------------------- kademe yardımcıları
     @staticmethod
     def _tier_rank(tier) -> int:
@@ -1352,12 +1403,12 @@ class SmartAutoSwitcher:
         if not target_guid and candidates:
             target_guid = candidates[0]
 
-        if not target_guid:
-            return
-
         # Kademenin monitör bazlı Hz hedefleri (1. ve 2. monitör ayrı seçilir)
         target_hz = int(getattr(self, f"tier{rank}_hz", 0) or 0)
         target_hz2 = int(getattr(self, f"tier{rank}_hz2", 0) or 0)
+
+        if not target_guid and target_hz <= 0 and target_hz2 <= 0:
+            return False
 
         hz_actual = None
         hz_ok = None
@@ -1365,7 +1416,7 @@ class SmartAutoSwitcher:
         if self.hz_enabled and (target_hz > 0 or target_hz2 > 0):
             hz_actual, hz_ok = self._apply_hz_targets(rank)
 
-        ok = PowerManagerService.set_active_plan(target_guid)
+        ok = PowerManagerService.set_active_plan(target_guid) if target_guid else False
         if ok or target_hz > 0 or target_hz2 > 0:
             self.current_tier = tier
             self._candidate_tier = tier

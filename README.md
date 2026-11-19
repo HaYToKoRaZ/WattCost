@@ -3,7 +3,7 @@
 # ⚡ WattCost HaYTooL
 ### Real-Time PC Wall Power, Electricity Cost Tracker & Smart Automation Engine
 
-[![GitHub release](https://img.shields.io/badge/Release-v7.5-0ea5e9?style=for-the-badge&logo=github)](https://github.com/HaYToKoRaZ/WattCost/releases)
+[![GitHub release](https://img.shields.io/badge/Release-v7.6-0ea5e9?style=for-the-badge&logo=github)](https://github.com/HaYToKoRaZ/WattCost/releases)
 [![Platform](https://img.shields.io/badge/Platform-Windows%2010%20%7C%2011-0078D6?style=for-the-badge&logo=windows)](https://www.microsoft.com/windows)
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-10B981?style=for-the-badge)](LICENSE)
@@ -166,7 +166,10 @@ WattCost. HaYTooL.exe --tab smart
 WattCost. HaYTooL.exe --hz 144
 
 # Silent headless daemon for secondary Windows users (Task Scheduler: no tray icon, read-only INI)
-"WattCost. HaYTooL.exe" --hide
+"WattCost. HaYTooL.exe" hide
+"WattCost. HaYTooL.exe" hide1     # Applies SmartSwitch Tier 1 (Power Plan + Monitor Hz) & runs hidden
+"WattCost. HaYTooL.exe" hide3     # Applies SmartSwitch Tier 3 (Power Plan + Monitor Hz) & runs hidden
+"WattCost. HaYTooL.exe" hideauto  # Runs full 4-tier SmartSwitch dynamic automation in hidden mode
 ```
 
 ---
@@ -310,7 +313,10 @@ WattCost. HaYTooL.exe --tab smart
 WattCost. HaYTooL.exe --hz 144
 
 # Ikincil Windows hesaplari icin penceresiz ve tray simgesiz gizli baslangic (yeni INI olusturmaz)
-"WattCost. HaYTooL.exe" --hide
+"WattCost. HaYTooL.exe" hide
+"WattCost. HaYTooL.exe" hide1     # Akilli Gecis Kademe 1 (Guc Plani + Monitor Hz) uygulayarak gizli baslar
+"WattCost. HaYTooL.exe" hide3     # Akilli Gecis Kademe 3 (Guc Plani + Monitor Hz) uygulayarak gizli baslar
+"WattCost. HaYTooL.exe" hideauto  # 4 kademeli Akilli Gecis otomasyonunu gizli modda dinamik calistirir
 ```
 
 ---

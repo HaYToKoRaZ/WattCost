@@ -27,8 +27,28 @@ if __name__ == "__main__" and len(sys.argv) >= 3 and sys.argv[1] == "--watch":
     sys.exit(0)
 
 
-def run_hidden_daemon():
-    """Pencere ve sistem tepsisi açmadan yalnızca sensör, tüketim kaydı ve Zalman LCD pompa çalıştırır.
+def _parse_hide_mode(argv: list) -> tuple:
+    """Komut satırında hide / hide1..hide4 / hideauto parametresi olup olmadığını çözümler."""
+    args_l = [str(a).strip().lower() for a in argv[1:]]
+    for idx, a in enumerate(args_l):
+        clean = a.lstrip("-")
+        if clean in ("hide1", "hide2", "hide3", "hide4"):
+            return True, int(clean[-1])
+        if clean in ("hideauto", "hide-auto", "hide_auto"):
+            return True, "auto"
+        if clean == "hide":
+            if idx + 1 < len(args_l):
+                nxt = args_l[idx + 1].lstrip("-")
+                if nxt in ("1", "2", "3", "4"):
+                    return True, int(nxt)
+                if nxt == "auto":
+                    return True, "auto"
+            return True, None
+    return False, None
+
+
+def run_hidden_daemon(hide_target=None):
+    """Pencere ve sistem tepsisi açmadan yalnızca sensör, tüketim kaydı, Akıllı Kademe (Plan+Hz) ve Zalman LCD pompa çalıştırır.
     Mevcut INI dosyasını salt-okunur okur; asla yeni INI oluşturmaz veya üzerine yazmaz.
     """
     import atexit
@@ -37,6 +57,19 @@ def run_hidden_daemon():
     from config_manager import load_config_dict, calculate_wall_power_w
     from sensor_reader import UnifiedSensorReader
     from history_manager import HistoryManager
+    from power_manager import SmartAutoSwitcher
+
+    cfg = load_config_dict()
+    switcher = SmartAutoSwitcher(on_plan_switched=None).configure_from_dict(cfg)
+
+    # hide1..hide4 verilmişse kademenin Güç Planı + Monitör 1/2 Hz ayarlarını anında uygula
+    if hide_target in (1, 2, 3, 4):
+        switcher.hz_enabled = True
+        switcher.enabled = False
+        switcher._apply_tier(f"tier{hide_target}", f"Hidden Startup Tier {hide_target}")
+    elif hide_target == "auto" or (hide_target is None and switcher.enabled):
+        switcher.enabled = True
+        switcher.force_apply_current("Hidden SmartSwitch Auto")
 
     # Oturum bazlı tekil örnek (Local\... yalnızca o Windows kullanıcı oturumuna özeldir)
     mutex = ctypes.windll.kernel32.CreateMutexW(None, False, "Local\\WattCostHiddenDaemon")
@@ -58,7 +91,6 @@ def run_hidden_daemon():
             except Exception:
                 pass
 
-    cfg = load_config_dict()
     reader = UnifiedSensorReader()
     zalman = None
     if cfg.get("zalman_active", True):
@@ -84,6 +116,14 @@ def run_hidden_daemon():
             # Her 30 sn'de ana kullanıcının INI değişikliklerini salt-okunur yeniden yükle
             if now - last_cfg_reload >= 30.0:
                 cfg = load_config_dict()
+                was_auto = switcher.enabled
+                switcher.configure_from_dict(cfg)
+                if hide_target in (1, 2, 3, 4):
+                    switcher.enabled = False
+                elif hide_target == "auto":
+                    switcher.enabled = True
+                else:
+                    switcher.enabled = was_auto and bool(cfg.get("smart_switch_enabled", False))
                 last_cfg_reload = now
 
             sensors = reader.read_sensors()
@@ -94,6 +134,10 @@ def run_hidden_daemon():
             except (TypeError, ValueError): cpu_w = 0.0
             try: gpu_w = float(sensors.get("PGPU1", 0.0))
             except (TypeError, ValueError): gpu_w = 0.0
+            try: cpu_uti = int(float(sensors.get("SCPUUTI", 0.0)))
+            except (TypeError, ValueError): cpu_uti = 0
+            try: gpu_uti = int(float(sensors.get("SGPU1UTI", 0.0)))
+            except (TypeError, ValueError): gpu_uti = 0
             try: cpu_temp = int(float(sensors.get("TCPU", sensors.get("TCPUPKG", 0.0))))
             except (TypeError, ValueError): cpu_temp = 0
             try: gpu_temp = int(float(sensors.get("TGPU1", 0.0)))
@@ -132,6 +176,12 @@ def run_hidden_daemon():
             total_wall_w = calculate_wall_power_w(cpu_w, gpu_w, cfg)
             price = float(cfg.get("kwh_price_tl", 2.60) or 2.60)
             HistoryManager.add_energy(total_wall_w * (dt / 3600.0), price)
+
+            if switcher.enabled:
+                try:
+                    switcher.evaluate(False, gpu_uti, cpu_uti, total_wall_w)
+                except Exception:
+                    pass
     finally:
         HistoryManager.flush_history()
         if zalman is not None:
@@ -146,9 +196,11 @@ def run_hidden_daemon():
                 pass
 
 
-if __name__ == "__main__" and any(a.lower() in ("--hide", "hide") for a in sys.argv[1:]):
-    run_hidden_daemon()
-    sys.exit(0)
+if __name__ == "__main__":
+    _is_hide, _hide_target = _parse_hide_mode(sys.argv)
+    if _is_hide:
+        run_hidden_daemon(_hide_target)
+        sys.exit(0)
 
 import threading
 import time

@@ -772,7 +772,10 @@
   "history_open_folder": "📂 Klasörü Aç",
   "history_weekdays": "Pazartesi,Salı,Çarşamba,Perşembe,Cuma,Cumartesi,Pazar",
   "history_months": "Ocak,Şubat,Mart,Nisan,Mayıs,Haziran,Temmuz,Ağustos,Eylül,Ekim,Kasım,Aralık",
-  "cli_group_hide": "🕵️ Tam Gizli Çoklu-Kullanıcı Modu (hide / --hide)",
+  "cli_group_hide": "🕵️ Tam Gizli Çoklu-Kullanıcı Modu (hide / hide1..4 / hideauto)",
   "cli_desc_hide": "Pencere ve saat yanı tepsi simgesi açmadan yalnızca tüketim kaydı + Zalman pompa için arka planda başlar (yeni INI oluşturmaz).",
+  "cli_desc_hide1": "Gizli modda başlar ve Akıllı Geçiş Kademe 1 (Ultra Tasarruf) güç planı + monitör Hz ayarlarını aktif eder (hide1..hide4).",
+  "cli_desc_hide3": "Gizli modda başlar ve Akıllı Geçiş Kademe 3 (Yüksek Performans) güç planı + monitör Hz ayarlarını aktif eder.",
+  "cli_desc_hideauto": "Gizli modda başlar ve 4 kademeli Akıllı Geçiş (güç planı + Hz) otomasyonunu arka planda dinamik çalıştırır.",
   "cli_hide_help": "Pencere ve sistem tepsisi simgesi açmadan arka planda çalışır (diğer Windows hesapları için Görev Zamanlayıcı)."
 }

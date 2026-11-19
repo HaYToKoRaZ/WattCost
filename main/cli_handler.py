@@ -162,8 +162,12 @@ VALID_CLI_FLAGS = [
     "--osd",
     "--tab",
     "--tray",
-    "--hide",
-    "hide",
+    "--hide", "hide",
+    "--hide1", "hide1",
+    "--hide2", "hide2",
+    "--hide3", "hide3",
+    "--hide4", "hide4",
+    "--hide-auto", "hideauto",
 ]
 
 
@@ -388,8 +392,8 @@ def handle_cli_args() -> bool:
     if len(sys.argv) <= 1:
         return False
 
-    # --watch ve --hide/hide parametreleri arka plan izleyicileridir, CLI olarak kesme
-    if sys.argv[1].lower() in ("--watch", "--hide", "hide"):
+    # --watch ve --hide/hide/hide1..4/hideauto parametreleri arka plan izleyicileridir, CLI olarak kesme
+    if sys.argv[1].lower().lstrip("-") in ("watch", "hide", "hide1", "hide2", "hide3", "hide4", "hideauto", "hide-auto"):
         return False
 
     parser = argparse.ArgumentParser(
@@ -470,8 +474,9 @@ def handle_cli_args() -> bool:
   {CLR_CYAN}--tab <cost | powerplan | smart | compare>{CLR_RESET}
       Açık WattCost penceresini öne getirip ilgili sekmeye geçer.
 
-  {CLR_CYAN}hide, --hide{CLR_RESET}
+  {CLR_CYAN}hide, --hide | hide1..hide4 | hideauto{CLR_RESET}
       Pencere ve saat yanı tepsi simgesi açmadan arka planda çalışır (yeni INI oluşturmaz).
+      hide1..hide4 ilgili Akıllı Geçiş kademesinin Güç Planı + Monitör Hz ayarlarını uygulayarak başlar.
 
   {CLR_CYAN}-h, --help{CLR_RESET}
       Bu yardım ekranını görüntüler.

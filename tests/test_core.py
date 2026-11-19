@@ -112,11 +112,19 @@ class WattCostCoreTests(unittest.TestCase):
         with open(os.path.join(MAIN_DIR, "app.py"), encoding="utf-8") as f:
             src = f.read()
         pos_watch = src.find('sys.argv[1] == "--watch"')
-        pos_hide = src.find('run_hidden_daemon()')
+        pos_hide = src.find('run_hidden_daemon(')
         pos_tk = src.find("import tkinter as tk")
         self.assertGreater(pos_watch, 0)
         self.assertGreater(pos_hide, pos_watch)
         self.assertGreater(pos_tk, pos_hide)
+
+        import app as app_mod
+        self.assertEqual(app_mod._parse_hide_mode(["app.exe", "hide"]), (True, None))
+        self.assertEqual(app_mod._parse_hide_mode(["app.exe", "hide1"]), (True, 1))
+        self.assertEqual(app_mod._parse_hide_mode(["app.exe", "--hide3"]), (True, 3))
+        self.assertEqual(app_mod._parse_hide_mode(["app.exe", "hide", "4"]), (True, 4))
+        self.assertEqual(app_mod._parse_hide_mode(["app.exe", "hideauto"]), (True, "auto"))
+        self.assertEqual(app_mod._parse_hide_mode(["app.exe", "--status"]), (False, None))
 
     def test_wall_power_formula_helper(self):
         cfg = {"case_base_w": 46.7}

@@ -10,7 +10,7 @@ import time
 import threading
 import tkinter as tk
 from tkinter import ttk
-from config_manager import THEME, UI_SCALE, fs, get_asset_path, APP_VERSION
+from config_manager import THEME, UI_SCALE, fs, get_asset_path, APP_VERSION, apply_dark_titlebar
 from history_manager import WindowsAutoStart
 from hotkey_manager import HOTKEY_OPTIONS
 from language_manager import _t
@@ -257,8 +257,11 @@ class UIComponentsMixin:
         lbl_icon = tk.Label(pill, text=icon, font=(f_font, fs(10)), bg=c_bg, fg=accent_color, padx=int(6 * UI_SCALE))
         lbl_icon.pack(side="left")
 
-        # Sadece Plan Adı
-        lbl_name = tk.Label(pill, text=plan_name, font=(f_font, fs(9), "bold"),
+        # Plan Adı (varsa Hz bilgisiyle birlikte)
+        disp_plan_name = plan_name
+        if hz and int(hz) > 0 and f"{int(hz)} Hz" not in str(plan_name):
+            disp_plan_name = f"{plan_name} • {int(hz)} Hz"
+        lbl_name = tk.Label(pill, text=disp_plan_name, font=(f_font, fs(9), "bold"),
                             fg=c_fg_primary, bg=c_bg, anchor="w", padx=int(4 * UI_SCALE))
         lbl_name.pack(side="left", fill="x", expand=True)
 
@@ -357,13 +360,6 @@ class UIComponentsMixin:
         pill.bind("<Leave>", _on_leave)
         _schedule_close(2800)
 
-        # Ayrıca Sistem Tepsisi (Tray) bildirimini de tetikle
-        if hasattr(self, 'tray_icon') and self.tray_icon:
-            try:
-                self.tray_icon.notify(plan_name, _t("toast_tag_plan_changed", "⚡ Güç Planı Değişti"))
-            except Exception:
-                pass
-
     def apply_window_icon(self, win):
         """Pencereye (root veya Toplevel) uygulamanın resmi simgesini uygular."""
         try:
@@ -420,9 +416,9 @@ class UIComponentsMixin:
         def _draw():
             canvas.delete("all")
             val = bool(var.get())
-            track_color = THEME["accent_cyan"] if val else "#1E293B"
-            border_color = THEME["accent_cyan"] if val else "#334155"
-            thumb_color = "#FFFFFF" if val else "#64748B"
+            track_color = THEME["accent_cyan"] if val else THEME["card_inner"]
+            border_color = THEME["accent_cyan"] if val else THEME["card_border"]
+            thumb_color = "#FFFFFF" if val else THEME["text_muted"]
 
             # Yuvarlak köşeli pill rayı
             canvas.create_oval(1, 1, sw_h - 1, sw_h - 1, fill=track_color, outline=border_color)
@@ -619,7 +615,7 @@ class UIComponentsMixin:
         tw.protocol("WM_DELETE_WINDOW", _on_close)
 
         if hasattr(self, "btn_test_screen"):
-            self.btn_test_screen.config(text=_t("test_screen_active_btn", "✓ Test Ekranı Açık"), bg="#1E3A5F")
+            self.btn_test_screen.config(text=_t("test_screen_active_btn", "✓ Test Ekranı Açık"), bg=THEME["btn_active"])
 
         self.update_test_screen()
 
@@ -702,34 +698,35 @@ class UIComponentsMixin:
     def open_settings(self):
         f_font = THEME["font_family"]
         top = tk.Toplevel(self.root)
+        top.withdraw()
         self.apply_window_icon(top)
         top.title(_t("settings_title", "⚙ TARİFE VE SİSTEM AYARLARI"))
         # Geniş Yatay Dikdörtgen (Dashboard Oranı) - 2 Kolonlu Yayvan Düzen
         screen_w = top.winfo_screenwidth()
         screen_h = top.winfo_screenheight()
-        target_w = min(int(screen_w * 0.96), max(860, int(920 * UI_SCALE)))
-        target_h = min(int(screen_h * 0.94), max(620, int(660 * UI_SCALE)))
+        target_w = min(int(screen_w * 0.96), max(920, int(980 * UI_SCALE)))
+        target_h = min(int(screen_h * 0.94), max(640, int(680 * UI_SCALE)))
         pos_x = max(10, (screen_w - target_w) // 2)
         pos_y = max(10, (screen_h - target_h) // 2)
 
         top.geometry(f"{target_w}x{target_h}+{pos_x}+{pos_y}")
-        top.minsize(int(820 * UI_SCALE), int(560 * UI_SCALE))
-        top.configure(bg=THEME["card_bg"])
+        top.minsize(int(860 * UI_SCALE), int(580 * UI_SCALE))
+        top.configure(bg=THEME["bg"])
         top.resizable(True, True)
         top.transient(self.root)
-        top.grab_set()
+        apply_dark_titlebar(top)
 
-        # Sabit Üst Başlık Barı (Başlık, Otomatik Kayıt & CLI Rehberi Butonu)
-        f_top_header = tk.Frame(top, bg=THEME["card_bg"])
-        f_top_header.pack(fill="x", padx=18, pady=(8, 4))
+        # Sabit Üst Başlık Barı (Başlık, Otomatik Kayıt & Tek CLI Rehberi Butonu)
+        f_top_header = tk.Frame(top, bg=THEME["bg"])
+        f_top_header.pack(fill="x", padx=16, pady=(10, 6))
 
-        f_header_left = tk.Frame(f_top_header, bg=THEME["card_bg"])
+        f_header_left = tk.Frame(f_top_header, bg=THEME["bg"])
         f_header_left.pack(side="left", fill="y")
 
-        tk.Label(f_header_left, text=f"{_t('settings_title', '⚙ TARİFE VE SİSTEM AYARLARI')} (v{APP_VERSION})", font=(f_font, 10, "bold"),
-                 fg=THEME["accent_cyan"], bg=THEME["card_bg"]).pack(anchor="w")
-        lbl_autosave = tk.Label(f_header_left, text=_t("settings_autosave_note", "⚡ Tüm ayarlar anında otomatik kaydedilir"), font=(f_font, 7, "italic"),
-                                fg=THEME["accent_green"], bg=THEME["card_bg"])
+        tk.Label(f_header_left, text=f"{_t('settings_title', '⚙ TARİFE VE SİSTEM AYARLARI')} (v{APP_VERSION})", font=(f_font, fs(10), "bold"),
+                 fg=THEME["accent_cyan"], bg=THEME["bg"]).pack(anchor="w")
+        lbl_autosave = tk.Label(f_header_left, text=_t("settings_autosave_note", "⚡ Tüm ayarlar anında otomatik kaydedilir"), font=(f_font, fs(7), "italic"),
+                                fg=THEME["accent_green"], bg=THEME["bg"])
         lbl_autosave.pack(anchor="w")
 
         btn_top_cli = self.make_btn(
@@ -743,30 +740,31 @@ class UIComponentsMixin:
         )
         btn_top_cli.pack(side="right", padx=(4, 0), pady=2)
 
-        # 2 Kolonlu Yayvan Ana Gövde (Kaydırma Çubuğu Olmadan Tam Sığar)
-        f_body = tk.Frame(top, bg=THEME["card_bg"])
-        f_body.pack(fill="both", expand=True, padx=12, pady=(0, 8))
+        # 2 Eşit Sütunlu Kart Düzeni
+        f_body = tk.Frame(top, bg=THEME["bg"])
+        f_body.pack(fill="both", expand=True, padx=14, pady=(0, 10))
+        f_body.columnconfigure(0, weight=1, uniform="set_col")
+        f_body.columnconfigure(1, weight=1, uniform="set_col")
+        f_body.rowconfigure(0, weight=1)
 
-        f_col_left = tk.Frame(f_body, bg=THEME["card_bg"])
-        f_col_left.pack(side="left", fill="both", expand=True, padx=(0, 6))
+        f_col_left = tk.Frame(f_body, bg=THEME["bg"])
+        f_col_left.grid(row=0, column=0, sticky="nsew", padx=(0, 6))
 
-        # İki kolon arasındaki zarif dikey ayırıcı çizgi
-        tk.Frame(f_body, bg=THEME["card_border"], width=1).pack(side="left", fill="y", pady=4)
-
-        f_col_right = tk.Frame(f_body, bg=THEME["card_bg"])
-        f_col_right.pack(side="right", fill="both", expand=True, padx=(6, 0))
+        f_col_right = tk.Frame(f_body, bg=THEME["bg"])
+        f_col_right.grid(row=0, column=1, sticky="nsew", padx=(6, 0))
 
         entries = {}
 
         # ========================================================
-        # SOL KOLON: TARİFE, ELEKTRİK BİRİM FİYATI & HARİCİ CİHAZLAR
+        # SOL KOLON: 1) TARİFE, 2) HARİCİ CİHAZLAR, 3) SİSTEM DAVRANIŞI
         # ========================================================
 
-        # --- 1. ELEKTRİK TARİFESİ KADEMESİ ---
-        f_tier = tk.Frame(f_col_left, bg=THEME["card_bg"])
-        f_tier.pack(fill="x", padx=6, pady=(2, 2))
-        tk.Label(f_tier, text=_t("settings_tariff_tier_title", "⚡ ELEKTRİK TARİFESİ KADEMESİ:"), font=(f_font, 8, "bold"),
-                 fg=THEME["accent_cyan"], bg=THEME["card_bg"]).pack(anchor="w", pady=(0, 1))
+        # --- KART 1: ELEKTRİK TARİFESİ KADEMESİ ---
+        card_tariff = self.create_card(f_col_left, pady=(0, 6))
+        self.make_card_title(card_tariff, _t("settings_tariff_tier_title", "⚡ ELEKTRİK TARİFESİ KADEMESİ:"), THEME["accent_cyan"])
+
+        f_tier = tk.Frame(card_tariff, bg=THEME["card_bg"])
+        f_tier.pack(fill="x", padx=12, pady=(0, 8))
 
         cur_price = float(self.config.get("kwh_price_tl", 4.86))
         init_tier = "high" if abs(cur_price - 4.86) < 0.05 else ("low" if abs(cur_price - 3.24) < 0.05 else "custom")
@@ -801,32 +799,30 @@ class UIComponentsMixin:
             rb.pack(anchor="w", pady=1)
             self.add_tooltip(rb, tariff_tooltips.get(code, ""))
 
-        f_form = tk.Frame(f_col_left, bg=THEME["card_bg"])
-        f_form.pack(fill="x", padx=6, pady=(1, 2))
+        f_form = tk.Frame(card_tariff, bg=THEME["card_bg"])
+        f_form.pack(fill="x", padx=12, pady=(0, 8))
 
         f_price_row = tk.Frame(f_form, bg=THEME["card_bg"])
         f_price_row.pack(fill="x", pady=1)
-        tk.Label(f_price_row, text=_t("settings_price_label", "Elektrik Birim Fiyatı (TL / kWh):"), font=(f_font, 8), fg=THEME["text_secondary"],
-                 bg=THEME["card_bg"]).pack(anchor="w")
-        ent_price = tk.Entry(f_price_row, font=(f_font, 9), bg=THEME["card_inner"], fg=THEME["text_primary"],
-                             insertbackground=THEME["text_primary"], relief="flat",
+        tk.Label(f_price_row, text=_t("settings_price_label", "Elektrik Birim Fiyatı (TL / kWh):"), font=(f_font, fs(8)), fg=THEME["text_secondary"],
+                 bg=THEME["card_bg"]).pack(side="left", padx=(0, 8))
+        ent_price = tk.Entry(f_price_row, font=(f_font, fs(9), "bold"), bg=THEME["card_inner"], fg=THEME["accent_cyan"],
+                             insertbackground=THEME["text_primary"], relief="flat", width=10, justify="center",
                              highlightbackground=THEME["card_border"], highlightcolor=THEME["accent_cyan"],
                              highlightthickness=1)
         ent_price.insert(0, str(self.config.get("kwh_price_tl", 4.86)))
-        ent_price.pack(fill="x", ipady=2)
+        ent_price.pack(side="right", ipady=2)
         self.add_tooltip(ent_price, _t("settings_price_tooltip", "1 kWh elektrik enerjisinin KDV ve dağıtım dahil güncel TL birim fiyatı"))
         entries["kwh_price_tl"] = ent_price
 
-        tk.Frame(f_col_left, bg=THEME["card_border"], height=1).pack(fill="x", padx=6, pady=(6, 3))
+        # --- KART 2: PRİZDEN ÇEKİLEN HARİCİ CİHAZLAR & ÇEVRE BİRİMLERİ ---
+        card_devices = self.create_card(f_col_left, pady=(0, 6))
+        self.make_card_title(card_devices, _t("settings_devices_title", "🔌 PRİZDEN ÇEKİLEN HARİCİ CİHAZLAR:"), THEME["accent_amber"])
 
-        # --- 2. PRİZDEN ÇEKİLEN HARİCİ CİHAZLAR & ÇEVRE BİRİMLERİ ---
-        f_devices_sec = tk.Frame(f_col_left, bg=THEME["card_bg"])
-        f_devices_sec.pack(fill="x", padx=6, pady=(1, 2))
-
-        tk.Label(f_devices_sec, text=_t("settings_devices_title", "🔌 PRİZDEN ÇEKİLEN HARİCİ CİHAZLAR:"), font=(f_font, 8, "bold"),
-                 fg=THEME["accent_cyan"], bg=THEME["card_bg"]).pack(anchor="w", pady=(0, 1))
+        f_devices_sec = tk.Frame(card_devices, bg=THEME["card_bg"])
+        f_devices_sec.pack(fill="x", padx=12, pady=(0, 8))
         tk.Label(f_devices_sec, text=_t("settings_devices_desc", "Cihaz adını ve Watt değerini değiştirebilir, istemediklerinizi kapatabilir veya yeni cihaz ekleyebilirsiniz."),
-                 font=(f_font, 7), fg=THEME["text_muted"], bg=THEME["card_bg"], wraplength=380, justify="left").pack(anchor="w", pady=(0, 2))
+                 font=(f_font, fs(7)), fg=THEME["text_muted"], bg=THEME["card_bg"], wraplength=int(420 * UI_SCALE), justify="left").pack(anchor="w", pady=(0, 4))
 
         auto_mon_var = tk.BooleanVar(value=bool(self.config.get("auto_detect_second_monitor", True)))
 
@@ -932,96 +928,39 @@ class UIComponentsMixin:
         render_device_rows()
 
         # ========================================================
-        # SAĞ KOLON: ZALMAN, TEMA, TRAY, OSD & SİSTEM DAVRANIŞI
+        # SAĞ KOLON: 4) GÖRÜNÜM & TRAY, 5) RTSS OSD & DONANIM
         # ========================================================
+        card_appearance = self.create_card(f_col_right, pady=(0, 6))
+        self.make_card_title(card_appearance, _t("settings_sec_appearance_tray", "🎨 GÖRÜNÜM VE SİSTEM TEPSİSİ (TRAY)"), THEME["accent_cyan"])
 
-        # --- 3. ZALMAN ALPHA2 LCD POMPA DESTEĞİ ---
-        f_zalman_sec = tk.Frame(f_col_right, bg=THEME["card_bg"])
-        f_zalman_sec.pack(fill="x", padx=6, pady=(2, 2))
-
-        tk.Label(f_zalman_sec, text=_t("settings_zalman_title", "❄️ ZALMAN ALPHA2 LCD POMPA DESTEĞİ:"), font=(f_font, 8, "bold"),
-                 fg=THEME["accent_cyan"], bg=THEME["card_bg"]).pack(anchor="w", pady=(0, 1))
-
-        zalman_on_var = tk.BooleanVar(value=bool(self.config.get("zalman_active", True)))
-
-        def on_zalman_setting_toggle():
-            is_on = zalman_on_var.get()
-            self.config["zalman_active"] = is_on
-            if hasattr(self, 'zalman_active_var'):
-                self.zalman_active_var.set(is_on)
-            if hasattr(self, 'zalman') and self.zalman:
-                self.zalman.set_enabled(is_on)
-                if not is_on:
-                    self.zalman.set_blank(True)
-            if hasattr(self, 'update_zalman_visibility'):
-                self.update_zalman_visibility()
-            auto_save()
-
-        self.make_check(f_zalman_sec, _t("settings_zalman_enable", "Zalman Alpha2 LCD Pompa Desteğini Aktif Et"), zalman_on_var,
-                        on_zalman_setting_toggle, fg=THEME["text_primary"], bold=True,
-                        tooltip=_t("zalman_chk_tooltip", "Zalman Alpha2 sıvı soğutma LCD pompasıyla USB üzerinden haberleşmeyi ve ekran kartını kontrol eder")).pack(anchor="w", pady=1)
-
-        tk.Label(f_zalman_sec, text=_t("settings_zalman_note", "* Kapatıldığında Zalman pompası ile USB iletişimi kesilir ve ana ekrandaki kart gizlenir."),
-                 font=(f_font, 7, "italic"), fg=THEME["text_muted"], bg=THEME["card_bg"],
-                 wraplength=380, justify="left").pack(anchor="w", padx=24, pady=(1, 2))
-
-        tk.Frame(f_col_right, bg=THEME["card_border"], height=1).pack(fill="x", padx=6, pady=(4, 2))
-
-        # --- KULAKLIK BATARYASI (USB + BLUETOOTH, BAGIMSIZ) ---
-        f_headset_sec = tk.Frame(f_col_right, bg=THEME["card_bg"])
-        f_headset_sec.pack(fill="x", padx=6, pady=(2, 2))
-
-        tk.Label(f_headset_sec, text=_t("settings_headset_title", "🎧 KULAKLIK BATARYASI:"), font=(f_font, 8, "bold"),
-                 fg=THEME["accent_cyan"], bg=THEME["card_bg"]).pack(anchor="w", pady=(0, 1))
-
-        headset_usb_var = tk.BooleanVar(value=bool(self.config.get("headset_usb_active", True)))
-        headset_bt_var = tk.BooleanVar(value=bool(self.config.get("headset_bt_active", True)))
-
-        def on_headset_usb_toggle():
-            if hasattr(self, 'apply_headset_enabled'):
-                self.apply_headset_enabled("usb", headset_usb_var.get())
-            auto_save()
-
-        def on_headset_bt_toggle():
-            if hasattr(self, 'apply_headset_enabled'):
-                self.apply_headset_enabled("bt", headset_bt_var.get())
-            auto_save()
-
-        self.make_check(f_headset_sec, _t("settings_headset_usb", "SteelSeries USB kulaklık (HID)"),
-                        headset_usb_var, on_headset_usb_toggle, fg=THEME["text_primary"], bold=True,
-                        tooltip=_t("settings_headset_usb_tip", "SteelSeries Arctis 7 / Pro bataryasını USB HID üzerinden okur; harici araç gerekmez")).pack(anchor="w", pady=1)
-
-        self.make_check(f_headset_sec, _t("settings_headset_bt", "Bluetooth kulaklık (Windows HFP)"),
-                        headset_bt_var, on_headset_bt_toggle, fg=THEME["text_primary"], bold=True,
-                        tooltip=_t("settings_headset_bt_tip", "Bağlı Bluetooth kulaklığın bataryasını Windows'un HFP cihaz özelliğinden okur")).pack(anchor="w", pady=1)
-
-        tk.Label(f_headset_sec, text=_t("settings_headset_note_dual", "* İki kaynak bağımsızdır: yalnızca sahip olduğunuz türü açık bırakın. İkisi de kapalıysa hiç okuma yapılmaz."),
-                 font=(f_font, 7, "italic"), fg=THEME["text_muted"], bg=THEME["card_bg"],
-                 wraplength=380, justify="left").pack(anchor="w", padx=24, pady=(1, 2))
-
-        tk.Frame(f_col_right, bg=THEME["card_border"], height=1).pack(fill="x", padx=6, pady=(4, 2))
         from config_manager import AVAILABLE_THEMES
-        f_theme_sec = tk.Frame(f_col_right, bg=THEME["card_bg"])
-        f_theme_sec.pack(fill="x", padx=6, pady=1)
-        tk.Label(f_theme_sec, text=_t("settings_theme_title", "🎨 Arayüz Teması:"), font=(f_font, 8, "bold"),
-                 fg=THEME["accent_cyan"], bg=THEME["card_bg"]).pack(anchor="w")
+        f_theme_sec = tk.Frame(card_appearance, bg=THEME["card_bg"])
+        f_theme_sec.pack(fill="x", padx=12, pady=(0, 4))
+        tk.Label(f_theme_sec, text=_t("settings_theme_title", "🎨 Arayüz Teması:"), font=(f_font, fs(8), "bold"),
+                 fg=THEME["text_secondary"], bg=THEME["card_bg"]).pack(anchor="w")
 
         is_tr = (self.lang_mgr.active_language_code == "tr") if hasattr(self, 'lang_mgr') else True
         theme_names = {}
         for k, v in AVAILABLE_THEMES.items():
             theme_names[k] = v["name_tr"] if is_tr else v["name_en"]
+        from config_manager import AVAILABLE_THEMES, resolve_theme_key
+        rev_theme_map = {}
+        theme_names = {}
+        for k, v in AVAILABLE_THEMES.items():
+            theme_names[k] = v["name_tr"] if is_tr else v["name_en"]
         rev_theme_map = {v: k for k, v in theme_names.items()}
-        cur_th_key = self.config.get("theme", "obsidian_cyber")
-        cur_th_name = theme_names.get(cur_th_key, theme_names.get("obsidian_cyber"))
+        cur_th_key = resolve_theme_key(self.config.get("theme", "auto"))
+        cur_th_name = theme_names.get(cur_th_key, theme_names.get("dark"))
 
-        opt_theme = ttk.Combobox(f_theme_sec, values=list(theme_names.values()), state="readonly", font=(f_font, 8))
+        opt_theme = ttk.Combobox(f_theme_sec, values=list(theme_names.values()), state="readonly", font=(f_font, fs(8)))
         opt_theme.set(cur_th_name)
         opt_theme.pack(fill="x", pady=(1, 0))
-        self.add_tooltip(opt_theme, _t("settings_theme_tip", "Uygulama pencereleri ve kartlar için 8 profesyonel renk paletinden birini seçin (RTSS OSD renkleri sabit kalır)"))
+        self.add_tooltip(opt_theme, _t("settings_theme_tip", "Uygulama pencereleri ve sağ tuş menüsü için Açık, Koyu veya Matrix temasını seçin"))
 
         def _on_theme_change(event=None):
             sel_name = opt_theme.get()
-            th_code = rev_theme_map.get(sel_name, "obsidian_cyber")
+            th_code = rev_theme_map.get(sel_name, "dark")
+            auto_save()
             if hasattr(self, 'apply_theme_to_ui'):
                 self.apply_theme_to_ui(th_code)
             else:
@@ -1029,22 +968,17 @@ class UIComponentsMixin:
                 set_active_theme(th_code)
                 self.config["theme"] = th_code
                 self.save_config()
-            top.configure(bg=THEME["card_bg"])
-            f_top_header.configure(bg=THEME["card_bg"])
-            f_body.configure(bg=THEME["card_bg"])
-            f_col_left.configure(bg=THEME["card_bg"])
-            f_col_right.configure(bg=THEME["card_bg"])
-            auto_save()
+            if top.winfo_exists():
+                top.destroy()
+            self.root.after(20, self.open_settings)
 
         opt_theme.bind("<<ComboboxSelected>>", _on_theme_change)
 
-        tk.Frame(f_col_right, bg=THEME["card_border"], height=1).pack(fill="x", padx=6, pady=(4, 2))
-
-        # --- 4. SİSTEM TEPSİSİ (TRAY) AYARLARI ---
-        f_tray_mode = tk.Frame(f_col_right, bg=THEME["card_bg"])
-        f_tray_mode.pack(fill="x", padx=6, pady=1)
-        tk.Label(f_tray_mode, text=_t("settings_tray_display_title", "📌 Saatteki Simge Göstergesi (Tray):"), font=(f_font, 8, "bold"),
-                 fg=THEME["accent_cyan"], bg=THEME["card_bg"]).pack(anchor="w")
+        # --- SİSTEM TEPSİSİ (TRAY) AYARLARI ---
+        f_tray_mode = tk.Frame(card_appearance, bg=THEME["card_bg"])
+        f_tray_mode.pack(fill="x", padx=12, pady=(4, 2))
+        tk.Label(f_tray_mode, text=_t("settings_tray_display_title", "📌 Saatteki Simge Göstergesi (Tray):"), font=(f_font, fs(8), "bold"),
+                 fg=THEME["text_secondary"], bg=THEME["card_bg"]).pack(anchor="w")
 
         tray_mode_map = {
             "power_w":   _t("tray_mode_power_w", "Prizden Toplam Güç (Watt)"),
@@ -1060,14 +994,14 @@ class UIComponentsMixin:
         cur_mode_key = self.config.get("tray_mode") or "power_w"
         current_display_name = tray_mode_map.get(cur_mode_key, _t("tray_mode_power_w", "Prizden Toplam Güç (Watt)"))
 
-        opt_tray = ttk.Combobox(f_tray_mode, values=list(tray_mode_map.values()), state="readonly", font=(f_font, 8))
+        opt_tray = ttk.Combobox(f_tray_mode, values=list(tray_mode_map.values()), state="readonly", font=(f_font, fs(8)))
         opt_tray.set(current_display_name)
         opt_tray.pack(fill="x", pady=(1, 0))
         self.add_tooltip(opt_tray, _t("settings_tray_mode_tip", "Windows görev çubuğu saat yanında simge olarak hangi canlı değerin gösterileceğini seçin"))
 
         # Yan yana kompakt Kutu Rengi ve Yazı Rengi seçimi
-        f_tray_colors = tk.Frame(f_col_right, bg=THEME["card_bg"])
-        f_tray_colors.pack(fill="x", padx=6, pady=1)
+        f_tray_colors = tk.Frame(card_appearance, bg=THEME["card_bg"])
+        f_tray_colors.pack(fill="x", padx=12, pady=2)
 
         f_tray_bg = tk.Frame(f_tray_colors, bg=THEME["card_bg"])
         f_tray_bg.pack(side="left", fill="x", expand=True, padx=(0, 3))
@@ -1115,8 +1049,8 @@ class UIComponentsMixin:
         opt_fg.pack(fill="x", pady=(1, 0))
 
         # Saatteki Simge Yazı Tipi (Tray Font)
-        f_tray_font = tk.Frame(f_col_right, bg=THEME["card_bg"])
-        f_tray_font.pack(fill="x", padx=6, pady=1)
+        f_tray_font = tk.Frame(card_appearance, bg=THEME["card_bg"])
+        f_tray_font.pack(fill="x", padx=12, pady=2)
         tk.Label(f_tray_font, text=_t("settings_tray_font_title", "🔤 Saatteki Simge Yazı Tipi (Font):"), font=(f_font, 8, "bold"),
                  fg=THEME["accent_purple"], bg=THEME["card_bg"]).pack(anchor="w")
 
@@ -1136,8 +1070,8 @@ class UIComponentsMixin:
         opt_font.pack(fill="x", pady=(1, 0))
 
         # Saatteki Simge Yazı Boyutu (Tray Size) & Yüke Göre Renk Eşikleri
-        f_tray_extra = tk.Frame(f_col_right, bg=THEME["card_bg"])
-        f_tray_extra.pack(fill="x", padx=6, pady=1)
+        f_tray_extra = tk.Frame(card_appearance, bg=THEME["card_bg"])
+        f_tray_extra.pack(fill="x", padx=12, pady=(2, 8))
 
         f_size_box = tk.Frame(f_tray_extra, bg=THEME["card_bg"])
         f_size_box.pack(side="left", fill="x", expand=True, padx=(0, 4))
@@ -1179,9 +1113,10 @@ class UIComponentsMixin:
         ent_tray_crit.insert(0, str(int(self.config.get("tray_watt_crit", 450))))
         ent_tray_crit.pack(side="left", padx=(1, 0))
 
-        tk.Frame(f_col_right, bg=THEME["card_border"], height=1).pack(fill="x", padx=6, pady=(4, 2))
+        # --- KART 5: OYUN İÇİ GÖSTERGE (RTSS) VE DONANIM (ZALMAN + KULAKLIK) ---
+        card_osd_hw = self.create_card(f_col_right, pady=(0, 0))
+        self.make_card_title(card_osd_hw, _t("settings_sec_osd_hw", "🎮 OYUN İÇİ GÖSTERGE (RTSS) VE DONANIM"), THEME["accent_purple"])
 
-        # --- 5. OYUN İÇİ GÖSTERGE (RTSS) AYARLARI ---
         pos_settings_map = {
             "top_right": _t("osd_pos_top_right", "↗ Sağ Üst (Varsayılan)"),
             "top_left": _t("osd_pos_top_left", "↖ Sol Üst"),
@@ -1190,8 +1125,8 @@ class UIComponentsMixin:
         }
         rev_pos_settings_map = {v: k for k, v in pos_settings_map.items()}
 
-        f_rtss_row = tk.Frame(f_col_right, bg=THEME["card_bg"])
-        f_rtss_row.pack(fill="x", padx=6, pady=1)
+        f_rtss_row = tk.Frame(card_osd_hw, bg=THEME["card_bg"])
+        f_rtss_row.pack(fill="x", padx=12, pady=(0, 6))
 
         f_pos_cfg = tk.Frame(f_rtss_row, bg=THEME["card_bg"])
         f_pos_cfg.pack(side="left", fill="x", expand=True, padx=(0, 3))
@@ -1216,9 +1151,101 @@ class UIComponentsMixin:
         opt_osd_hk.set(cur_hk_disp)
         opt_osd_hk.pack(fill="x", pady=(1, 0))
 
-        tk.Frame(f_col_right, bg=THEME["card_border"], height=1).pack(fill="x", padx=6, pady=(4, 2))
+        # --- AKILLI KADEME KISAYOL TUŞLARI (Varsayılan: Kapalı) ---
+        from hotkey_manager import TIER_HOTKEY_OPTIONS
+        none_hk_lbl = _t("smart_hotkey_none", "Yok (Kapalı)")
+        tier_hk_disp_map = {c: (none_hk_lbl if c == "none" else d) for c, d in TIER_HOTKEY_OPTIONS}
+        rev_tier_hk_map = {v: k for k, v in tier_hk_disp_map.items()}
+        tier_hotkeys_en_var = tk.BooleanVar(value=bool(self.config.get("smart_switch_hotkeys_enabled", False)))
 
-        # --- 6. SİSTEM DAVRANIŞI ---
+        f_tier_hk_sec = tk.Frame(card_osd_hw, bg=THEME["card_inner"], highlightbackground=THEME["card_border"], highlightthickness=1)
+        f_tier_hk_sec.pack(fill="x", padx=12, pady=(2, 6))
+
+        def _on_tier_hk_toggle():
+            self.config["smart_switch_hotkeys_enabled"] = bool(tier_hotkeys_en_var.get())
+            auto_save()
+
+        self.make_check(
+            f_tier_hk_sec,
+            _t("settings_tier_hotkeys_enable", "⌨️ Akıllı Kademe Kısayollarını Aktif Et"),
+            tier_hotkeys_en_var,
+            _on_tier_hk_toggle,
+            fg=THEME["accent_cyan"], bold=True, bg=THEME["card_inner"],
+            tooltip=_t("settings_tier_hotkeys_tip", "Açıkken Kademe 1-4 için atanan global klavye kısayolları (varsayılan Ctrl+Alt+1..4) dinlenir")
+        ).pack(anchor="w", padx=8, pady=(5, 2))
+
+        f_tier_hk_grid = tk.Frame(f_tier_hk_sec, bg=THEME["card_inner"])
+        f_tier_hk_grid.pack(fill="x", padx=8, pady=(0, 6))
+        f_tier_hk_grid.columnconfigure(1, weight=1, uniform="thk")
+        f_tier_hk_grid.columnconfigure(3, weight=1, uniform="thk")
+
+        tier_hk_combos = {}
+        for idx, t_num in enumerate((1, 2, 3, 4)):
+            r_pos, c_pos = divmod(idx, 2)
+            tk.Label(f_tier_hk_grid, text=f"K{t_num}:", font=(f_font, fs(7), "bold"),
+                     fg=THEME["text_secondary"], bg=THEME["card_inner"]).grid(row=r_pos, column=c_pos * 2, sticky="w", padx=(0 if c_pos == 0 else 8, 4), pady=2)
+            cb_thk = ttk.Combobox(f_tier_hk_grid, values=list(tier_hk_disp_map.values()), state="readonly", font=(f_font, fs(7)))
+            cur_t_code = str(self.config.get(f"smart_switch_t{t_num}_hotkey", f"Ctrl+Alt+{t_num}") or "none")
+            cb_thk.set(tier_hk_disp_map.get(cur_t_code, cur_t_code))
+            cb_thk.grid(row=r_pos, column=c_pos * 2 + 1, sticky="ew", pady=2)
+            tier_hk_combos[t_num] = cb_thk
+
+        # --- ZALMAN ALPHA2 LCD POMPA & KULAKLIK BATARYASI ---
+        f_hw_box = tk.Frame(card_osd_hw, bg=THEME["card_inner"], highlightbackground=THEME["card_border"], highlightthickness=1)
+        f_hw_box.pack(fill="x", padx=12, pady=(2, 10))
+
+        zalman_on_var = tk.BooleanVar(value=bool(self.config.get("zalman_active", True)))
+        headset_usb_var = tk.BooleanVar(value=bool(self.config.get("headset_usb_active", True)))
+        headset_bt_var = tk.BooleanVar(value=bool(self.config.get("headset_bt_active", True)))
+
+        def on_zalman_setting_toggle():
+            is_on = zalman_on_var.get()
+            self.config["zalman_active"] = is_on
+            if hasattr(self, 'zalman_active_var'):
+                self.zalman_active_var.set(is_on)
+            if hasattr(self, 'zalman') and self.zalman:
+                self.zalman.set_enabled(is_on)
+                if not is_on:
+                    self.zalman.set_blank(True)
+            if hasattr(self, 'update_zalman_visibility'):
+                self.update_zalman_visibility()
+            auto_save()
+
+        def on_headset_usb_toggle():
+            if hasattr(self, 'apply_headset_enabled'):
+                self.apply_headset_enabled("usb", headset_usb_var.get())
+            auto_save()
+
+        def on_headset_bt_toggle():
+            if hasattr(self, 'apply_headset_enabled'):
+                self.apply_headset_enabled("bt", headset_bt_var.get())
+            auto_save()
+
+        self.make_check(f_hw_box, _t("settings_zalman_enable", "Zalman Alpha2 LCD Pompa Desteğini Aktif Et"), zalman_on_var,
+                        on_zalman_setting_toggle, fg=THEME["text_primary"], bold=True, bg=THEME["card_inner"],
+                        tooltip=_t("zalman_chk_tooltip", "Zalman Alpha2 sıvı soğutma LCD pompasıyla USB üzerinden haberleşmeyi ve ekran kartını kontrol eder")).pack(anchor="w", padx=8, pady=(6, 2))
+        tk.Label(f_hw_box, text=_t("settings_zalman_note", "* Kapatıldığında Zalman pompası ile USB iletişimi kesilir ve ana ekrandaki kart gizlenir."),
+                 font=(f_font, fs(6), "italic"), fg=THEME["text_muted"], bg=THEME["card_inner"],
+                 wraplength=int(390 * UI_SCALE), justify="left").pack(anchor="w", padx=32, pady=(0, 4))
+
+        tk.Frame(f_hw_box, bg=THEME["card_border"], height=1).pack(fill="x", padx=8, pady=2)
+
+        self.make_check(f_hw_box, _t("settings_headset_usb", "SteelSeries USB kulaklık (HID)"),
+                        headset_usb_var, on_headset_usb_toggle, fg=THEME["text_primary"], bold=True, bg=THEME["card_inner"],
+                        tooltip=_t("settings_headset_usb_tip", "SteelSeries Arctis 7 / Pro bataryasını USB HID üzerinden okur; harici araç gerekmez")).pack(anchor="w", padx=8, pady=(4, 2))
+
+        self.make_check(f_hw_box, _t("settings_headset_bt", "Bluetooth kulaklık (Windows HFP)"),
+                        headset_bt_var, on_headset_bt_toggle, fg=THEME["text_primary"], bold=True, bg=THEME["card_inner"],
+                        tooltip=_t("settings_headset_bt_tip", "Bağlı Bluetooth kulaklığın bataryasını Windows'un HFP cihaz özelliğinden okur")).pack(anchor="w", padx=8, pady=2)
+
+        tk.Label(f_hw_box, text=_t("settings_headset_note_dual", "* İki kaynak bağımsızdır: yalnızca sahip olduğunuz türü açık bırakın. İkisi de kapalıysa hiç okuma yapılmaz."),
+                 font=(f_font, fs(6), "italic"), fg=THEME["text_muted"], bg=THEME["card_inner"],
+                 wraplength=int(390 * UI_SCALE), justify="left").pack(anchor="w", padx=32, pady=(0, 6))
+
+        # --- KART 3 (SOL KOLON ALTI): SİSTEM DAVRANIŞI VE BİLDİRİMLER ---
+        card_system = self.create_card(f_col_left, pady=(0, 0))
+        self.make_card_title(card_system, _t("settings_sec_system", "⚙️ SİSTEM DAVRANIŞI VE BİLDİRİMLER"), THEME["accent_green"])
+
         autostart_var = tk.BooleanVar(value=WindowsAutoStart.is_enabled())
         close_to_tray_var = tk.BooleanVar(value=self.config.get("close_to_tray", True))
         toast_notify_var = tk.BooleanVar(value=self.config.get("power_plan_toast", True))
@@ -1233,6 +1260,15 @@ class UIComponentsMixin:
                     self.config[k] = float(raw_val)
                 except ValueError:
                     pass
+
+            if "kwh_price_tl" in self.config:
+                p_now = float(self.config.get("kwh_price_tl", 4.86))
+                if abs(p_now - 3.24) < 0.01:
+                    tariff_var.set("low")
+                elif abs(p_now - 4.86) < 0.01:
+                    tariff_var.set("high")
+                else:
+                    tariff_var.set("custom")
 
             # Harici Cihazlar Listesini Güncelle
             for d, v_en, ent_n, ent_w in dev_widgets:
@@ -1252,6 +1288,10 @@ class UIComponentsMixin:
             if hasattr(self, 'update_zalman_visibility'):
                 self.update_zalman_visibility()
 
+            if hasattr(self, 'on_top_var'):
+                self.config["always_on_top"] = bool(self.on_top_var.get())
+                self.apply_always_on_top()
+
             self.config["close_to_tray"] = close_to_tray_var.get()
             self.config["power_plan_toast"] = toast_notify_var.get()
             self.config["power_plan_sound"] = power_sound_var.get()
@@ -1262,11 +1302,6 @@ class UIComponentsMixin:
             if hasattr(self, 'smart_switch_toast_var'):
                 self.smart_switch_toast_var.set(smart_toast_var.get())
 
-            old_mode = self.config.get("tray_mode")
-            old_font = self.config.get("tray_font")
-            old_size = self.config.get("tray_font_size")
-            old_bg = self.config.get("tray_bg")
-            old_fg = self.config.get("tray_fg")
             self.config["tariff_tier"] = tariff_var.get()
             self.config["tray_mode"] = rev_tray_map.get(opt_tray.get(), self.config.get("tray_mode", "power_w"))
             self.config["tray_font"] = rev_font_map.get(opt_font.get(), self.config.get("tray_font", "bahnschrift"))
@@ -1306,6 +1341,20 @@ class UIComponentsMixin:
                 self.opt_rtss_hotkey.set(opt_osd_hk.get())
             if hasattr(self, "hotkey_mgr") and self.hotkey_mgr:
                 self.hotkey_mgr.start(sel_hk)
+                if getattr(self.hotkey_mgr, "vk", None) is not None:
+                    self.config["rtss_hotkey_vk"] = int(self.hotkey_mgr.vk)
+                if getattr(self.hotkey_mgr, "mod", None) is not None:
+                    self.config["rtss_hotkey_mod"] = int(self.hotkey_mgr.mod)
+
+            self.config["smart_switch_hotkeys_enabled"] = bool(tier_hotkeys_en_var.get())
+            for t_num, cb_thk in tier_hk_combos.items():
+                sel_t_code = rev_tier_hk_map.get(cb_thk.get(), f"Ctrl+Alt+{t_num}")
+                self.config[f"smart_switch_t{t_num}_hotkey"] = sel_t_code
+                t_var = getattr(self, f"smart_t{t_num}_hotkey_var", None)
+                if t_var is not None:
+                    t_var.set(none_hk_lbl if sel_t_code == "none" else f"⌨️ {cb_thk.get()}")
+            if hasattr(self, "register_all_hotkeys"):
+                self.register_all_hotkeys()
 
             self.save_config()
             WindowsAutoStart.set_enabled(autostart_var.get())
@@ -1313,62 +1362,417 @@ class UIComponentsMixin:
                 self.refresh_devices_ui()
             if hasattr(self, '_refresh_tray_icon'):
                 self._refresh_tray_icon()
+            if hasattr(self, 'tray_icon') and self.tray_icon:
+                try:
+                    self.tray_icon.update_menu()
+                except Exception:
+                    pass
             self.on_rtss_change()
 
             lbl_autosave.config(text=_t("settings_autosave_saved", "✓ Değişiklik anında kaydedildi & uygulandı"), fg=THEME["accent_cyan"])
             top.after(1000, lambda: lbl_autosave.config(text=_t("settings_autosave_note", "⚡ Tüm ayarlar anında otomatik kaydedilir"), fg=THEME["accent_green"]) if top.winfo_exists() else None)
 
+            # Bağlı GitHub token varsa 5 sn debounce ile Gist yedeğini arka planda güncelle
+            _tok_auto = str(self.config.get("github_gist_token", "") or "").strip()
+            if _tok_auto and getattr(self, "_github_profile_cache", {}).get("token") == _tok_auto:
+                prev_tid = getattr(self, "_gist_auto_backup_after", None)
+                if prev_tid is not None:
+                    try:
+                        self.root.after_cancel(prev_tid)
+                    except Exception:
+                        pass
+                def _run_bg_gist():
+                    self._gist_auto_backup_after = None
+                    t_now = str(self.config.get("github_gist_token", "") or "").strip()
+                    g_now = str(self.config.get("github_gist_id", "") or "").strip()
+                    if not t_now:
+                        return
+                    def _bg():
+                        try:
+                            from config_manager import backup_settings_to_gist
+                            ok_b, new_id_b, _ = backup_settings_to_gist(t_now, g_now)
+                            if ok_b and new_id_b and new_id_b != g_now:
+                                self.root.after(0, lambda: (self.config.__setitem__("github_gist_id", new_id_b), self.save_config()))
+                        except Exception:
+                            pass
+                    threading.Thread(target=_bg, daemon=True).start()
+                self._gist_auto_backup_after = self.root.after(5000, _run_bg_gist)
+
         for ent in list(entries.values()) + [ent_tray_warn, ent_tray_crit]:
             ent.bind("<KeyRelease>", auto_save)
             ent.bind("<FocusOut>", auto_save)
 
-        for cb in (opt_theme, opt_tray, opt_font, opt_size, opt_bg, opt_fg, opt_osd_pos, opt_osd_hk):
+        for cb in [opt_tray, opt_font, opt_size, opt_bg, opt_fg, opt_osd_pos, opt_osd_hk] + list(tier_hk_combos.values()):
             cb.bind("<<ComboboxSelected>>", auto_save)
 
-        f_sys = tk.Frame(f_col_right, bg=THEME["card_bg"])
-        f_sys.pack(fill="x", padx=6, pady=1)
+        f_sys = tk.Frame(card_system, bg=THEME["card_bg"])
+        f_sys.pack(fill="x", padx=12, pady=(0, 8))
 
         self.make_check(f_sys, _t("settings_autostart_chk", "Windows başlangıcında otomatik başlat"), autostart_var, auto_save,
                         fg=THEME["text_primary"], bold=True,
-                        tooltip=_t("settings_autostart_tip", "Bilgisayar her açıldığında WattCost'u arka planda sistem tepsisinde otomatik başlatır")).pack(anchor="w", pady=1)
+                        tooltip=_t("settings_autostart_tip", "Bilgisayar her açıldığında WattCost'u arka planda sistem tepsisinde otomatik başlatır")).pack(anchor="w", pady=2)
 
         self.make_check(f_sys, _t("settings_power_plan_sound_chk", "🔔 Güç planı değişiminde sesli uyarı çal"), power_sound_var, auto_save,
                         fg=THEME["text_primary"], bold=True,
-                        tooltip=_t("settings_power_plan_sound_tip", "Sistem güç planı değiştirildiğinde sesli bildirim çalar")).pack(anchor="w", pady=1)
+                        tooltip=_t("settings_power_plan_sound_tip", "Sistem güç planı değiştirildiğinde sesli bildirim çalar")).pack(anchor="w", pady=2)
 
         self.make_check(f_sys, _t("settings_power_plan_toast_chk", "💬 Güç planı değişiminde Toast bildirim göster"), toast_notify_var, auto_save,
                         fg=THEME["text_primary"], bold=True,
-                        tooltip=_t("settings_power_plan_toast_tip", "Güç planı değiştirildiğinde ekranın sağ altında açılan bilgi kutusunu gösterir")).pack(anchor="w", pady=1)
+                        tooltip=_t("settings_power_plan_toast_tip", "Güç planı değiştirildiğinde ekranın sağ altında açılan bilgi kutusunu gösterir")).pack(anchor="w", pady=2)
 
         self.make_check(f_sys, _t("smart_sound_lbl", "🔔 Akıllı geçişlerde (SmartSwitch) sesli uyarı"), smart_sound_var, auto_save,
                         fg=THEME["text_primary"], bold=True,
-                        tooltip=_t("smart_sound_tip", "Otomasyon kademe değiştirdiğinde sesli bildirim çalar")).pack(anchor="w", pady=1)
+                        tooltip=_t("smart_sound_tip", "Otomasyon kademe değiştirdiğinde sesli bildirim çalar")).pack(anchor="w", pady=2)
 
         self.make_check(f_sys, _t("smart_toast_lbl", "💬 Akıllı geçişlerde Toast bildirim göster"), smart_toast_var, auto_save,
                         fg=THEME["text_primary"], bold=True,
-                        tooltip=_t("smart_toast_tip", "Otomasyon güç planını veya Hz değerini değiştirdiğinde ekranın sağ altında açılan bilgi kutusunu gösterir")).pack(anchor="w", pady=1)
+                        tooltip=_t("smart_toast_tip", "Otomasyon güç planını veya Hz değerini değiştirdiğinde ekranın sağ altında açılan bilgi kutusunu gösterir")).pack(anchor="w", pady=2)
 
-        self.make_check(f_sys, _t("settings_always_on_top_chk", "Pencereyi Her Zaman En Üstte Tut"), getattr(self, 'always_on_top_var', tk.BooleanVar(value=True)), lambda: self.toggle_always_on_top() if hasattr(self, 'toggle_always_on_top') else None,
-                        fg=THEME["text_primary"], bold=True).pack(anchor="w", pady=1)
+        if not hasattr(self, 'on_top_var'):
+            self.on_top_var = tk.BooleanVar(value=bool(self.config.get("always_on_top", False)))
+        self.make_check(f_sys, _t("settings_always_on_top_chk", "Pencereyi Her Zaman En Üstte Tut"), self.on_top_var, auto_save,
+                        fg=THEME["text_primary"], bold=True).pack(anchor="w", pady=2)
 
         self.make_check(f_sys, _t("settings_close_to_tray_chk", "Çarpı (X) ile kapatınca tepsiye gizle"), close_to_tray_var, auto_save,
-                        tooltip=_t("settings_close_to_tray_tip", "Pencereyi (X) ile kapattığınızda program kapanmaz; arka planda güç ve maliyet takibini sürdürür")).pack(anchor="w", pady=1)
+                        tooltip=_t("settings_close_to_tray_tip", "Pencereyi (X) ile kapattığınızda program kapanmaz; arka planda güç ve maliyet takibini sürdürür")).pack(anchor="w", pady=2)
         tk.Label(f_sys, text="* " + _t("settings_close_to_tray_note", "İşaretsizse X'e basınca program tamamen kapanır ve izleme durur."),
-                 font=(f_font, 7, "italic"), fg=THEME["text_muted"], bg=THEME["card_bg"],
-                 wraplength=380, justify="left").pack(anchor="w", padx=20, pady=(0, 4))
+                 font=(f_font, fs(6), "italic"), fg=THEME["text_muted"], bg=THEME["card_bg"],
+                 wraplength=int(400 * UI_SCALE), justify="left").pack(anchor="w", padx=24, pady=(0, 2))
 
-        # CLI Komut Kılavuzu & Terminal Butonu
-        tk.Frame(f_sys, bg=THEME["card_border"], height=1).pack(fill="x", pady=(6, 4))
-        btn_cli = self.make_btn(
-            f_sys,
-            _t("settings_btn_cli_guide", "💻 CLI Komut Kılavuzu & Terminal"),
-            self.open_cli_guide,
-            bg=THEME["card_inner"],
-            fg=THEME["accent_cyan"],
-            bold=True,
-            tooltip=_t("settings_btn_cli_guide_tip", "WattCost'u komut satırından (CMD / PowerShell / Kısayollar) yönetmek için tüm CLI komutlarını ve parametreleri görüntüler")
+        # --- KART 6 (SAĞ KOLON ALTI): GITHUB GİST AYAR YEDEĞİ ---
+        card_gist = self.create_card(f_col_right, pady=(6, 0))
+        self.make_card_title(card_gist, _t("settings_sec_gist", "☁️ GITHUB GİST AYAR YEDEĞİ"), THEME["accent_cyan"])
+
+        f_gist = tk.Frame(card_gist, bg=THEME["card_bg"])
+        f_gist.pack(fill="x", padx=12, pady=(0, 8))
+
+        f_gist_tok = tk.Frame(f_gist, bg=THEME["card_bg"])
+        f_gist_tok.pack(fill="x", pady=(0, 4))
+        tk.Label(f_gist_tok, text=_t("settings_gist_token_lbl", "GitHub Token (gist):"), font=(f_font, fs(7), "bold"),
+                 fg=THEME["text_secondary"], bg=THEME["card_bg"]).pack(side="left")
+        def _open_gist_token_page():
+            import urllib.parse
+            desc = urllib.parse.quote_plus(f"WattCost HaYTooL ({time.strftime('%Y-%m-%d')})")
+            url = f"https://github.com/settings/tokens/new?scopes=gist&description={desc}"
+            try:
+                os.startfile(url)
+            except Exception:
+                import webbrowser
+                webbrowser.open(url)
+
+        self.make_btn(
+            f_gist_tok, _t("settings_gist_get_token", "🔑 Token Al"),
+            _open_gist_token_page,
+            fg=THEME["accent_cyan"], bg=THEME["card_inner"], padx=int(6 * UI_SCALE), pady=1,
+            tooltip=_t("settings_gist_get_token_tip", "GitHub'da yalnızca 'gist' izinli yeni token oluşturma sayfasını açar")
+        ).pack(side="right")
+
+        ent_gist_token = tk.Entry(
+            f_gist, show="*", font=("Consolas", fs(8)),
+            bg=THEME["card_inner"], fg=THEME["text_primary"], insertbackground=THEME["accent_cyan"],
+            relief="flat", bd=0, highlightbackground=THEME["card_border"], highlightthickness=1
         )
-        btn_cli.pack(fill="x", padx=4, pady=(2, 4), ipady=2)
+        ent_gist_token.insert(0, str(self.config.get("github_gist_token", "") or ""))
+        ent_gist_token.pack(fill="x", ipady=3, pady=(0, 6))
+        self.add_tooltip(ent_gist_token, _t("settings_gist_token_tip", "Yalnızca 'gist' yetkili Personal Access Token. Token yedek dosyasına ASLA yazılmaz."))
+
+        # Profil resmi + kullanıcı adı + otomatik Gist eşleşme satırı
+        f_gist_profile = tk.Frame(f_gist, bg=THEME["card_inner"], highlightbackground=THEME["card_border"], highlightthickness=1)
+        f_gist_profile.pack(fill="x", pady=(0, 6))
+
+        lbl_gist_avatar = tk.Label(f_gist_profile, text="🐙", font=(f_font, fs(11)),
+                                   fg=THEME["text_muted"], bg=THEME["card_inner"], width=3)
+        lbl_gist_avatar.pack(side="left", padx=(6, 4), pady=4)
+
+        lbl_gist_user = tk.Label(
+            f_gist_profile,
+            text=_t("settings_gist_not_connected", "GitHub hesabı bağlı değil (Token yapıştırın)"),
+            font=(f_font, fs(7), "bold"), fg=THEME["text_muted"], bg=THEME["card_inner"], anchor="w"
+        )
+        lbl_gist_user.pack(side="left", fill="x", expand=True, padx=(0, 4), pady=4)
+
+        def _set_token_inputs_visible(visible: bool):
+            if visible:
+                if not f_gist_tok.winfo_ismapped():
+                    f_gist_tok.pack(fill="x", pady=(0, 4), before=f_gist_profile)
+                if not ent_gist_token.winfo_ismapped():
+                    ent_gist_token.pack(fill="x", ipady=3, pady=(0, 6), before=f_gist_profile)
+                try:
+                    btn_gist_clear.pack_forget()
+                except Exception:
+                    pass
+            else:
+                try:
+                    f_gist_tok.pack_forget()
+                    ent_gist_token.pack_forget()
+                except Exception:
+                    pass
+                if not btn_gist_clear.winfo_ismapped():
+                    btn_gist_clear.pack(side="right", padx=(0, 6), pady=4)
+
+        def _clear_gist_token():
+            ent_gist_token.delete(0, tk.END)
+            self.config["github_gist_token"] = ""
+            self.config["github_gist_id"] = ""
+            self.save_config()
+            self._github_profile_cache = {}
+            if hasattr(self, "refresh_header_github_avatar"):
+                self.refresh_header_github_avatar()
+            _last_synced_tok[0] = ""
+            _set_token_inputs_visible(True)
+            lbl_gist_avatar.config(image="", text="🐙", width=3)
+            lbl_gist_user.config(text=_t("settings_gist_not_connected", "GitHub hesabı bağlı değil (Token yapıştırın)"), fg=THEME["text_muted"])
+            lbl_gist_status.config(text=_t("settings_gist_cleared", "✓ GitHub Token silindi ve bağlantı kesildi"), fg=THEME["accent_amber"])
+
+        btn_gist_clear = self.make_btn(
+            f_gist_profile, _t("settings_gist_clear_btn", "🗑️ Token Sil"),
+            _clear_gist_token,
+            fg=THEME["accent_rose"], bg=THEME["card_bg"], padx=int(6 * UI_SCALE), pady=1,
+            tooltip=_t("settings_gist_clear_tip", "Kayıtlı GitHub Token'ını uygulamadan kaldırır ve bağlantıyı keser")
+        )
+
+        lbl_gist_status = tk.Label(f_gist, text="", font=(f_font, fs(7), "bold"),
+                                   fg=THEME["text_muted"], bg=THEME["card_bg"], anchor="w")
+
+        _gist_sync_after = [None]
+        _last_synced_tok = [None]
+
+        def _render_avatar(av_bytes: bytes):
+            if not av_bytes or not top.winfo_exists():
+                return
+            photo = self.make_circular_avatar(av_bytes, int(26 * UI_SCALE)) if hasattr(self, "make_circular_avatar") else None
+            if photo is not None:
+                lbl_gist_avatar.config(image=photo, text="", width=0)
+                lbl_gist_avatar.image = photo
+
+        def _sync_github_profile(force=False):
+            tok = ent_gist_token.get().strip()
+            self.config["github_gist_token"] = tok
+            self.save_config()
+            if not tok:
+                _last_synced_tok[0] = ""
+                self._github_profile_cache = {}
+                if hasattr(self, "refresh_header_github_avatar"):
+                    self.refresh_header_github_avatar()
+                lbl_gist_avatar.config(image="", text="🐙", width=3)
+                lbl_gist_user.config(text=_t("settings_gist_not_connected", "GitHub hesabı bağlı değil (Token yapıştırın)"), fg=THEME["text_muted"])
+                return
+            if not force and tok == _last_synced_tok[0]:
+                return
+            if len(tok) < 20:
+                return
+            _last_synced_tok[0] = tok
+            lbl_gist_user.config(text=_t("settings_gist_checking", "⏳ GitHub hesabı ve yedek Gist kontrol ediliyor..."), fg=THEME["accent_cyan"])
+
+            def _worker():
+                try:
+                    from config_manager import fetch_github_user_and_backup_gist
+                    ok, info, err = fetch_github_user_and_backup_gist(tok)
+                except Exception as exc:
+                    ok, info, err = False, {}, str(exc)
+                def _done():
+                    if not top.winfo_exists() or ent_gist_token.get().strip() != tok:
+                        return
+                    if ok:
+                        login = info.get("login", "")
+                        found_gid = info.get("gist_id", "")
+                        if found_gid:
+                            self.config["github_gist_id"] = found_gid
+                            self.save_config()
+                            lbl_gist_user.config(
+                                text=_t("settings_gist_connected_found", "✓ @{user} • Mevcut ayar yedeği otomatik bulundu").format(user=login),
+                                fg=THEME["accent_green"]
+                            )
+                        else:
+                            lbl_gist_user.config(
+                                text=_t("settings_gist_connected_new", "✓ @{user} • Bağlandı (ilk yedeklemeye hazır)").format(user=login),
+                                fg=THEME["accent_cyan"]
+                            )
+                        _render_avatar(info.get("avatar_bytes", b""))
+                        _set_token_inputs_visible(False)
+                        self._github_profile_cache = {
+                            "token": tok,
+                            "login": login,
+                            "avatar_bytes": info.get("avatar_bytes", b""),
+                        }
+                        if hasattr(self, "refresh_header_github_avatar"):
+                            self.refresh_header_github_avatar()
+                    else:
+                        _set_token_inputs_visible(True)
+                        self._github_profile_cache = {}
+                        if hasattr(self, "refresh_header_github_avatar"):
+                            self.refresh_header_github_avatar()
+                        lbl_gist_avatar.config(image="", text="🐙", width=3)
+                        lbl_gist_user.config(text=_t("settings_gist_err_fail", "✗ Gist hatası: {err}").format(err=err), fg=THEME["accent_rose"])
+                try:
+                    self.root.after(0, _done)
+                except Exception:
+                    pass
+
+            threading.Thread(target=_worker, daemon=True).start()
+
+        def _on_token_change(e=None):
+            self.config["github_gist_token"] = ent_gist_token.get().strip()
+            self.save_config()
+            if _gist_sync_after[0] is not None:
+                try:
+                    top.after_cancel(_gist_sync_after[0])
+                except Exception:
+                    pass
+            _gist_sync_after[0] = top.after(450, _sync_github_profile)
+
+        ent_gist_token.bind("<KeyRelease>", _on_token_change)
+        ent_gist_token.bind("<<Paste>>", lambda e: top.after(30, _on_token_change))
+        ent_gist_token.bind("<FocusOut>", lambda e: _sync_github_profile())
+        if str(self.config.get("github_gist_token", "") or "").strip():
+            top.after(50, lambda: _sync_github_profile(force=True))
+
+        def _do_gist_backup():
+            tok = ent_gist_token.get().strip()
+            gid = str(self.config.get("github_gist_id", "") or "").strip()
+            if not tok:
+                lbl_gist_status.config(text=_t("settings_gist_err_no_token", "⚠ Yedekleme için önce GitHub Token girin!"), fg=THEME["accent_amber"])
+                return
+            self.config["github_gist_token"] = tok
+            self.save_config()
+            lbl_gist_status.config(text=_t("settings_gist_working", "⏳ GitHub Gist ile iletişim kuruluyor..."), fg=THEME["accent_cyan"])
+
+            def _worker():
+                from config_manager import backup_settings_to_gist
+                ok, new_id, msg = backup_settings_to_gist(tok, gid)
+                def _done():
+                    if not top.winfo_exists():
+                        return
+                    if ok:
+                        self.config["github_gist_id"] = new_id
+                        self.save_config()
+                        txt = _t("settings_gist_backup_ok", "✓ Ayarlar Gizli Gist'e yedeklendi ({id})").format(id=new_id[:10] + "...")
+                        lbl_gist_status.config(text=txt, fg=THEME["accent_green"])
+                        if hasattr(self, "show_toast"):
+                            self.show_toast("WattCost", txt, THEME["accent_green"])
+                    else:
+                        lbl_gist_status.config(text=_t("settings_gist_err_fail", "✗ Gist hatası: {err}").format(err=msg), fg=THEME["accent_rose"])
+                self.root.after(0, _done)
+
+            threading.Thread(target=_worker, daemon=True).start()
+
+        def _do_gist_restore():
+            tok = ent_gist_token.get().strip()
+            gid = str(self.config.get("github_gist_id", "") or "").strip()
+            if not tok and not gid:
+                lbl_gist_status.config(text=_t("settings_gist_err_no_token", "⚠ Yedekleme için önce GitHub Token girin!"), fg=THEME["accent_amber"])
+                return
+            self.config["github_gist_token"] = tok
+            self.save_config()
+            lbl_gist_status.config(text=_t("settings_gist_working", "⏳ GitHub Gist ile iletişim kuruluyor..."), fg=THEME["accent_cyan"])
+
+            def _worker():
+                from config_manager import restore_settings_from_gist
+                ok, msg = restore_settings_from_gist(gid, tok)
+                def _done():
+                    if ok:
+                        self.load_config()
+                        self.config["github_gist_token"] = tok
+                        self.config["github_gist_id"] = msg
+                        self.save_config()
+                        if hasattr(self, "apply_theme_to_ui"):
+                            self.apply_theme_to_ui(self.config.get("theme", "auto"))
+                        if hasattr(self, "register_all_hotkeys"):
+                            self.register_all_hotkeys()
+                        if hasattr(self, "show_toast"):
+                            self.show_toast("WattCost", _t("settings_gist_restore_ok", "✓ Ayarlar Gist'ten geri yüklendi ve uygulandı!"), THEME["accent_green"])
+                        if top.winfo_exists():
+                            top.destroy()
+                        self.root.after(20, self.open_settings)
+                    elif top.winfo_exists():
+                        lbl_gist_status.config(text=_t("settings_gist_err_fail", "✗ Gist hatası: {err}").format(err=msg), fg=THEME["accent_rose"])
+                self.root.after(0, _done)
+
+            threading.Thread(target=_worker, daemon=True).start()
+
+        def _do_gist_preview():
+            tok = str(self.config.get("github_gist_token", "") or ent_gist_token.get()).strip()
+            gid = str(self.config.get("github_gist_id", "") or "").strip()
+            if not tok and not gid:
+                lbl_gist_status.config(text=_t("settings_gist_err_no_token", "⚠ Yedekleme için önce GitHub Token girin!"), fg=THEME["accent_amber"])
+                return
+            lbl_gist_status.config(text=_t("settings_gist_working", "⏳ GitHub Gist ile iletişim kuruluyor..."), fg=THEME["accent_cyan"])
+
+            def _worker():
+                try:
+                    from config_manager import fetch_gist_ini_preview
+                    ok, content, updated_at = fetch_gist_ini_preview(gid, tok)
+                except Exception as exc:
+                    ok, content, updated_at = False, str(exc), ""
+
+                def _done():
+                    if not top.winfo_exists():
+                        return
+                    if not ok:
+                        lbl_gist_status.config(text=_t("settings_gist_err_fail", "✗ Gist hatası: {err}").format(err=content), fg=THEME["accent_rose"])
+                        return
+                    lbl_gist_status.config(text="", fg=THEME["text_muted"])
+
+                    pv = tk.Toplevel(top)
+                    self.apply_window_icon(pv)
+                    pv.title(_t("settings_gist_preview_title", "☁️ GitHub Gist'teki Kayıtlı Ayarlar"))
+                    pv.configure(bg=THEME["bg"])
+                    apply_dark_titlebar(pv)
+                    pw, ph = int(560 * UI_SCALE), int(440 * UI_SCALE)
+                    px = max(10, (pv.winfo_screenwidth() - pw) // 2)
+                    py = max(10, (pv.winfo_screenheight() - ph) // 2)
+                    pv.geometry(f"{pw}x{ph}+{px}+{py}")
+
+                    f_pv_hdr = tk.Frame(pv, bg=THEME["bg"])
+                    f_pv_hdr.pack(fill="x", padx=12, pady=(10, 6))
+                    tk.Label(f_pv_hdr, text=_t("settings_gist_preview_title", "☁️ GitHub Gist'teki Kayıtlı Ayarlar"),
+                             font=(f_font, fs(10), "bold"), fg=THEME["accent_cyan"], bg=THEME["bg"]).pack(side="left")
+                    if updated_at:
+                        tk.Label(f_pv_hdr, text=_t("settings_gist_preview_updated", "Son yedekleme: {dt}").format(dt=updated_at.replace("T", " ").replace("Z", " UTC")),
+                                 font=(f_font, fs(7)), fg=THEME["text_muted"], bg=THEME["bg"]).pack(side="right")
+
+                    f_pv_txt = tk.Frame(pv, bg=THEME["card_bg"], highlightbackground=THEME["card_border"], highlightthickness=1)
+                    f_pv_txt.pack(fill="both", expand=True, padx=12, pady=(0, 8))
+                    sb = ttk.Scrollbar(f_pv_txt, orient="vertical")
+                    txt = tk.Text(f_pv_txt, font=("Consolas", fs(8)), bg=THEME["card_bg"], fg=THEME["text_primary"],
+                                  relief="flat", bd=6, wrap="none", yscrollcommand=sb.set)
+                    sb.config(command=txt.yview)
+                    sb.pack(side="right", fill="y")
+                    txt.pack(side="left", fill="both", expand=True)
+                    txt.insert("1.0", content)
+                    txt.config(state="disabled")
+
+                    f_pv_act = tk.Frame(pv, bg=THEME["bg"])
+                    f_pv_act.pack(fill="x", padx=12, pady=(0, 10))
+                    self.make_btn(f_pv_act, _t("settings_gist_restore_btn", "📥 Gist'ten Yükle"),
+                                  lambda: (pv.destroy(), _do_gist_restore()),
+                                  fg=THEME["accent_green"], bg=THEME["card_inner"]).pack(side="right")
+                    pv.grab_set()
+
+                try:
+                    self.root.after(0, _done)
+                except Exception:
+                    pass
+
+            threading.Thread(target=_worker, daemon=True).start()
+
+        f_gist_btns = tk.Frame(f_gist, bg=THEME["card_bg"])
+        f_gist_btns.pack(fill="x", pady=(0, 4))
+        self.make_btn(f_gist_btns, _t("settings_gist_backup_btn", "☁️ Gist'e Yedekle"), _do_gist_backup,
+                      fg=THEME["accent_cyan"], bg=THEME["card_inner"]).pack(side="left", fill="x", expand=True, padx=(0, 2))
+        self.make_btn(f_gist_btns, _t("settings_gist_preview_btn", "👁️ Yedeği Gör"), _do_gist_preview,
+                      fg=THEME["text_primary"], bg=THEME["card_inner"],
+                      tooltip=_t("settings_gist_preview_tip", "GitHub Gist'te kayıtlı eski ayarlarınızı önizler")).pack(side="left", fill="x", expand=True, padx=2)
+        self.make_btn(f_gist_btns, _t("settings_gist_restore_btn", "📥 Gist'ten Yükle"), _do_gist_restore,
+                      fg=THEME["accent_green"], bg=THEME["card_inner"]).pack(side="left", fill="x", expand=True, padx=(2, 0))
+        lbl_gist_status.pack(fill="x")
+        tk.Label(f_gist, text=_t("settings_gist_auto_note", "💡 Yedekleme: 'Gist'e Yedekle'ye bastığınızda veya ayar değiştirdiğinizde otomatik güncellenir."),
+                 font=(f_font, fs(6), "italic"), fg=THEME["text_muted"], bg=THEME["card_bg"],
+                 wraplength=int(410 * UI_SCALE), justify="left").pack(anchor="w", pady=(2, 0))
+
+        top.update_idletasks()
+        top.deiconify()
+        top.grab_set()
 
     # --- CLI Komut Kılavuzu & Terminal Penceresi ---
     def open_cli_guide(self):
@@ -1464,6 +1868,24 @@ class UIComponentsMixin:
                 "group": _t("cli_group_osd", "🎮 RivaTuner RTSS OSD Göstergesi (--osd)"),
                 "items": [
                     ("WattCost. HaYTooL.exe --osd toggle", _t("cli_desc_osd_toggle", "Oyun içi RivaTuner (RTSS) bilgi ekranını açar veya kapatır.")),
+                ]
+            },
+            {
+                "group": _t("cli_group_hz", "🖥️ Monitör Yenileme Hızı (--hz)"),
+                "items": [
+                    ("WattCost. HaYTooL.exe --hz 144", _t("cli_desc_hz", "Birincil monitörün yenileme hızını doğrudan ayarlar (örn. 60, 144).")),
+                ]
+            },
+            {
+                "group": _t("cli_group_tab", "🗂️ Sekme Açma (--tab)"),
+                "items": [
+                    ("WattCost. HaYTooL.exe --tab smart", _t("cli_desc_tab", "Açık pencereyi öne getirip belirtilen sekmeye geçer (cost, powerplan, smart, compare).")),
+                ]
+            },
+            {
+                "group": _t("cli_group_hide", "🕵️ Tam Gizli Çoklu-Kullanıcı Modu (hide / --hide)"),
+                "items": [
+                    ('"WattCost. HaYTooL.exe" --hide', _t("cli_desc_hide", "Pencere ve saat yanı tepsi simgesi açmadan yalnızca tüketim kaydı + Zalman pompa için arka planda başlar (yeni INI oluşturmaz).")),
                 ]
             },
             {

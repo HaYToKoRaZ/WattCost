@@ -740,8 +740,8 @@ class CostTabMixin:
         self.add_tooltip(self.btn_sep_color, _t("cost_rtss_sep_color_tip", "Yatay dizilimde metrikler arasındaki ayracın rengini seç"))
 
         def _open_sep_color_menu():
-            menu = tk.Menu(self.root, tearoff=0, bg="#121624", fg="#F1F5F9",
-                           activebackground="#1E263D", activeforeground="#FFFFFF",
+            menu = tk.Menu(self.root, tearoff=0, bg=THEME["card_bg"], fg=THEME["text_primary"],
+                           activebackground=THEME["btn_hover"], activeforeground=THEME["accent_cyan"],
                            font=(THEME["font_family"], fs(8), "bold"))
             sep_pal = [
                 (_t("color_gray", "Gri / Nötr"), "#64748B"),
@@ -862,7 +862,7 @@ class CostTabMixin:
                                     self.on_rtss_change,
                                     tooltip=_t("cost_rtss_session_kwh_tip", "Oturum maliyetinin yanına harcanan toplam kWh elektriği de ekler")).pack(anchor="w", padx=(14, 0))
 
-        _build_rows_group(f_col_left, _t("rtss_grp_hw", "🎮 OYUN & DONANIM"), "#38BDF8", self.RTSS_ROWS_HW)
+        _build_rows_group(f_col_left, _t("rtss_grp_hw", "🎮 OYUN & DONANIM"), THEME["accent_cyan"], self.RTSS_ROWS_HW)
         _build_rows_group(f_col_right, _t("rtss_grp_pwr", "⚡ GÜÇ & MALİYET"), THEME["accent_amber"], self.RTSS_ROWS_PWR)
 
         f_pwr_extra = tk.Frame(f_col_right, bg=THEME["card_bg"])
@@ -885,8 +885,8 @@ class CostTabMixin:
                  font=(f_font, fs(7)), fg=THEME["text_muted"], bg=THEME["card_bg"], justify="center").pack(fill="x", padx=10, pady=(6, 8))
 
     def open_color_picker_menu(self, btn, color_key, entry_widget):
-        menu = tk.Menu(self.root, tearoff=0, bg="#121624", fg="#F1F5F9",
-                       activebackground="#1E263D", activeforeground="#FFFFFF",
+        menu = tk.Menu(self.root, tearoff=0, bg=THEME["card_bg"], fg=THEME["text_primary"],
+                       activebackground=THEME["btn_hover"], activeforeground=THEME["accent_cyan"],
                        font=(THEME["font_family"], fs(8), "bold"))
         palette_names = {
             "#A855F7": _t("color_purple", "Mor"),

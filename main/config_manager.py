@@ -1,4 +1,4 @@
-"""
+﻿"""
 WattCost HaYTooL - Yapılandırma ve Tema Yöneticisi Modülü
 Uygulamanın tüm INI ayar tanımları, varsayılanları, renk paleti ve ölçekleme yardımcıları.
 """
@@ -6,20 +6,36 @@ import os
 import sys
 import json
 import socket
+import ssl
 import threading
 import ctypes
 import configparser
+import urllib.request
+import urllib.error
+import urllib.parse
 
 SINGLE_INSTANCE_PORT = 47892
-APP_VERSION = "6.3"
+APP_VERSION = "7.5"
+
+def is_windows_dark_mode() -> bool:
+    """Windows sistem temasının Koyu (Dark) modda olup olmadığını okur."""
+    try:
+        import winreg
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize") as k:
+            val, _ = winreg.QueryValueEx(k, "AppsUseLightTheme")
+            return int(val) == 0
+    except Exception:
+        return True
+
 
 def apply_dark_titlebar(window):
-    """Windows 10/11 DWM Immersive Dark Mode uygulayarak beyaz pencere parlamasını önler."""
+    """Aktif temaya göre Windows 10/11 pencere başlık çubuğunu Koyu veya Açık moda ayarlar."""
     try:
         window.update_idletasks()
         hwnd = ctypes.windll.user32.GetParent(window.winfo_id()) or window.winfo_id()
         DWMWA_USE_IMMERSIVE_DARK_MODE = 20
-        value = ctypes.c_int(1)
+        is_dark = 0 if THEME.get("bg", "").upper() == "#F1F5F9" else 1
+        value = ctypes.c_int(is_dark)
         res = ctypes.windll.dwmapi.DwmSetWindowAttribute(
             hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE,
             ctypes.byref(value), ctypes.sizeof(value)
@@ -102,11 +118,31 @@ def get_asset_path(filename):
         return p
     return filename
 
-# --- Theme Factory: 8 Profesyonel Masaüstü Renk Paleti ---
+# --- Theme Factory: Açık, Koyu ve Matrix Temaları ---
 AVAILABLE_THEMES = {
-    "obsidian_cyber": {
-        "name_tr": "İstanbul",
-        "name_en": "Istanbul",
+    "light": {
+        "name_tr": "Açık",
+        "name_en": "Light",
+        "bg": "#F1F5F9",
+        "card_bg": "#FFFFFF",
+        "card_border": "#CBD5E1",
+        "card_inner": "#E2E8F0",
+        "text_primary": "#0F172A",
+        "text_secondary": "#334155",
+        "text_muted": "#64748B",
+        "accent_cyan": "#0284C7",
+        "accent_green": "#059669",
+        "accent_amber": "#D97706",
+        "accent_rose": "#E11D48",
+        "accent_purple": "#7C3AED",
+        "btn_bg": "#E2E8F0",
+        "btn_hover": "#CBD5E1",
+        "btn_active": "#94A3B8",
+        "font_family": "Segoe UI",
+    },
+    "dark": {
+        "name_tr": "Koyu",
+        "name_en": "Dark",
         "bg": "#090B11",
         "card_bg": "#121624",
         "card_border": "#1E263D",
@@ -124,156 +160,42 @@ AVAILABLE_THEMES = {
         "btn_active": "#3B476F",
         "font_family": "Segoe UI",
     },
-    "midnight_galaxy": {
-        "name_tr": "Ankara",
-        "name_en": "Ankara",
-        "bg": "#0B0C14",
-        "card_bg": "#141424",
-        "card_border": "#2B2644",
-        "card_inner": "#1D1C33",
-        "text_primary": "#F5F3FF",
-        "text_secondary": "#A78BFA",
-        "text_muted": "#6D688D",
-        "accent_cyan": "#38BDF8",
-        "accent_green": "#34D399",
-        "accent_amber": "#FBBF24",
-        "accent_rose": "#F43F5E",
-        "accent_purple": "#C084FC",
-        "btn_bg": "#2B2644",
-        "btn_hover": "#3B335E",
-        "btn_active": "#4C417A",
-        "font_family": "Segoe UI",
-    },
-    "arctic_frost": {
-        "name_tr": "İzmir",
-        "name_en": "Izmir",
-        "bg": "#060D17",
-        "card_bg": "#0E1A2C",
-        "card_border": "#1A304F",
-        "card_inner": "#14243D",
-        "text_primary": "#F0F9FF",
-        "text_secondary": "#7DD3FC",
-        "text_muted": "#476A8A",
-        "accent_cyan": "#00F5FF",
-        "accent_green": "#2DD4BF",
-        "accent_amber": "#FCD34D",
-        "accent_rose": "#FB7185",
-        "accent_purple": "#A78BFA",
-        "btn_bg": "#1A304F",
-        "btn_hover": "#254570",
-        "btn_active": "#305A91",
-        "font_family": "Segoe UI",
-    },
-    "ocean_depths": {
-        "name_tr": "Antalya",
-        "name_en": "Antalya",
-        "bg": "#050F1A",
-        "card_bg": "#0B1E33",
-        "card_border": "#14375E",
-        "card_inner": "#0E2845",
-        "text_primary": "#E0F2FE",
-        "text_secondary": "#38BDF8",
-        "text_muted": "#4B7294",
-        "accent_cyan": "#38BDF8",
-        "accent_green": "#10B981",
-        "accent_amber": "#F59E0B",
-        "accent_rose": "#F43F5E",
-        "accent_purple": "#818CF8",
-        "btn_bg": "#14375E",
-        "btn_hover": "#1D4E85",
-        "btn_active": "#2666AD",
-        "font_family": "Segoe UI",
-    },
-    "forest_canopy": {
-        "name_tr": "Bursa",
-        "name_en": "Bursa",
-        "bg": "#06120D",
-        "card_bg": "#0D2118",
-        "card_border": "#1A3D2D",
-        "card_inner": "#122E22",
-        "text_primary": "#ECFDF5",
+    "matrix": {
+        "name_tr": "Matrix",
+        "name_en": "Matrix",
+        "bg": "#030A05",
+        "card_bg": "#07140B",
+        "card_border": "#144222",
+        "card_inner": "#0C2112",
+        "text_primary": "#D1FAE5",
         "text_secondary": "#6EE7B7",
-        "text_muted": "#45735E",
-        "accent_cyan": "#2DD4BF",
-        "accent_green": "#10B981",
-        "accent_amber": "#FBBF24",
-        "accent_rose": "#F87171",
-        "accent_purple": "#A78BFA",
-        "btn_bg": "#1A3D2D",
-        "btn_hover": "#26543E",
-        "btn_active": "#326C50",
-        "font_family": "Segoe UI",
-    },
-    "golden_hour": {
-        "name_tr": "Konya",
-        "name_en": "Konya",
-        "bg": "#120D08",
-        "card_bg": "#211710",
-        "card_border": "#3D2B1E",
-        "card_inner": "#2B1E16",
-        "text_primary": "#FFFBEB",
-        "text_secondary": "#FDE68A",
-        "text_muted": "#82664B",
-        "accent_cyan": "#38BDF8",
-        "accent_green": "#34D399",
-        "accent_amber": "#F59E0B",
+        "text_muted": "#34A853",
+        "accent_cyan": "#00FF66",
+        "accent_green": "#22C55E",
+        "accent_amber": "#A3E635",
         "accent_rose": "#F43F5E",
-        "accent_purple": "#C084FC",
-        "btn_bg": "#3D2B1E",
-        "btn_hover": "#573D2B",
-        "btn_active": "#704F38",
-        "font_family": "Segoe UI",
-    },
-    "sunset_boulevard": {
-        "name_tr": "Adana",
-        "name_en": "Adana",
-        "bg": "#140718",
-        "card_bg": "#250E2D",
-        "card_border": "#471A57",
-        "card_inner": "#33133D",
-        "text_primary": "#FDF2F8",
-        "text_secondary": "#F472B6",
-        "text_muted": "#7E498A",
-        "accent_cyan": "#00E5FF",
-        "accent_green": "#10B981",
-        "accent_amber": "#F59E0B",
-        "accent_rose": "#F43F5E",
-        "accent_purple": "#EC4899",
-        "btn_bg": "#471A57",
-        "btn_hover": "#63247A",
-        "btn_active": "#7E2E9C",
-        "font_family": "Segoe UI",
-    },
-    "modern_minimalist": {
-        "name_tr": "Eskişehir",
-        "name_en": "Eskisehir",
-        "bg": "#0D0D0E",
-        "card_bg": "#18181B",
-        "card_border": "#2E2E33",
-        "card_inner": "#212126",
-        "text_primary": "#FAFAFA",
-        "text_secondary": "#D4D4D8",
-        "text_muted": "#71717A",
-        "accent_cyan": "#38BDF8",
-        "accent_green": "#34D399",
-        "accent_amber": "#FBBF24",
-        "accent_rose": "#F87171",
-        "accent_purple": "#A78BFA",
-        "btn_bg": "#2E2E33",
-        "btn_hover": "#3F3F46",
-        "btn_active": "#52525B",
-        "font_family": "Segoe UI",
+        "accent_purple": "#10B981",
+        "btn_bg": "#0F2B17",
+        "btn_hover": "#163F22",
+        "btn_active": "#1E542E",
+        "font_family": "Consolas",
     },
 }
 
-THEME = dict(AVAILABLE_THEMES["obsidian_cyber"])
+THEME = dict(AVAILABLE_THEMES["dark" if is_windows_dark_mode() else "light"])
+
+def resolve_theme_key(theme_key: str) -> str:
+    """'auto' veya eski tema anahtarlarını 'light' / 'dark' / 'matrix' olarak çözer."""
+    k = str(theme_key or "auto").strip().lower()
+    if k in AVAILABLE_THEMES:
+        return k
+    return "dark" if is_windows_dark_mode() else "light"
 
 def set_active_theme(theme_key: str) -> bool:
     """Uygulamanın aktif görsel tema paletini günceller."""
-    if theme_key in AVAILABLE_THEMES:
-        THEME.update(AVAILABLE_THEMES[theme_key])
-        return True
-    return False
+    resolved = resolve_theme_key(theme_key)
+    THEME.update(AVAILABLE_THEMES[resolved])
+    return True
 
 # --- %25 Büyütülmüş Dinamik UI & Tipografi Ölçeği ---
 UI_SCALE = 1.25
@@ -302,6 +224,49 @@ def get_config_path(filename=CONFIG_FILE_NAME):
     # 3. Henüz yoksa doğrudan uygulama kök dizinine hedefle
     return cand_app
 
+
+def get_app_data_path(filename: str) -> str:
+    """Veri dosyalarını CWD'den bağımsız olarak doğrudan EXE/proje kök dizinine sabitler."""
+    return os.path.join(_app_dir, filename)
+
+
+def calculate_wall_power_w(cpu_w: float, gpu_w: float, cfg: dict, custom_devices=None) -> float:
+    """Kalibre edilmiş priz gücü formülü + etkin harici cihazları hesaplar."""
+    base_w = 46.7
+    try:
+        base_w = float(cfg.get("case_base_w", 46.7) or 46.7)
+    except (TypeError, ValueError):
+        base_w = 46.7
+    pc_wall_w = base_w + (1.632 * float(cpu_w or 0.0)) + (1.170 * float(gpu_w or 0.0))
+
+    if custom_devices is None:
+        raw_json = cfg.get("custom_devices_json", "")
+        if raw_json:
+            try:
+                parsed = json.loads(raw_json)
+                if isinstance(parsed, list):
+                    custom_devices = parsed
+            except Exception:
+                custom_devices = None
+
+    ext_wall = 0.0
+    if custom_devices:
+        for dev in custom_devices:
+            if dev.get("enabled", True) and dev.get("active", False):
+                try:
+                    ext_wall += float(dev.get("watt", 0.0))
+                except (TypeError, ValueError):
+                    pass
+    else:
+        if cfg.get("asus_mon_active", True):
+            ext_wall += float(cfg.get("asus_monitor_w", 16.5) or 0.0)
+        if cfg.get("samsung_mon_active", False):
+            ext_wall += float(cfg.get("samsung_monitor_w", 19.0) or 0.0)
+        if cfg.get("modem_active", True):
+            ext_wall += float(cfg.get("modem_w", 10.0) or 0.0)
+
+    return max(40.0, pc_wall_w + ext_wall)
+
 CONFIG_METADATA = [
     # --- [Genel_Ayarlar] ---
     {"section": "Genel_Ayarlar", "key": "always_on_top", "default": False,
@@ -322,9 +287,9 @@ CONFIG_METADATA = [
     {"section": "Genel_Ayarlar", "key": "language", "default": "auto",
      "tr": "Arayuz dili ('auto', 'tr', 'en' veya languages klasorundeki ozel dil)",
      "en": "UI language ('auto', 'tr', 'en' or custom language in languages folder)"},
-    {"section": "Genel_Ayarlar", "key": "theme", "default": "obsidian_cyber",
-     "tr": "Arayuz temasi ('obsidian_cyber', 'midnight_galaxy', 'arctic_frost', 'ocean_depths', 'forest_canopy', 'golden_hour', 'sunset_boulevard', 'modern_minimalist')",
-     "en": "UI theme ('obsidian_cyber', 'midnight_galaxy', 'arctic_frost', 'ocean_depths', 'forest_canopy', 'golden_hour', 'sunset_boulevard', 'modern_minimalist')"},
+    {"section": "Genel_Ayarlar", "key": "theme", "default": "auto",
+     "tr": "Arayuz temasi ('auto'=Sistem Temasi, 'light'=Acik, 'dark'=Koyu, 'matrix'=Matrix)",
+     "en": "UI theme ('auto'=System Theme, 'light'=Light, 'dark'=Dark, 'matrix'=Matrix)"},
     {"section": "Genel_Ayarlar", "key": "window_geometry", "default": "",
      "tr": "Son pencere konumu ve boyutu (orn. 1325x962+298+49); bos = varsayilan olcu",
      "en": "Last window position and size (e.g. 1325x962+298+49); empty = default size"},
@@ -579,9 +544,75 @@ CONFIG_METADATA = [
     {"section": "Guc_Yonetimi", "key": "smart_switch_revert_sec", "default": 5, "tr": "Dusuk kademeye donus gecikmesi (sn)", "en": "Delay before reverting to lower tier (sec)"},
     {"section": "Guc_Yonetimi", "key": "smart_switch_sound", "default": True, "tr": "Akilli gecislerde sesli uyari calinsin mi? (true / false)", "en": "Play audio alert on smart switch transitions? (true / false)"},
     {"section": "Guc_Yonetimi", "key": "smart_switch_toast", "default": True, "tr": "Akilli gecislerde toast bildirimi gosterilsin mi? (true / false)", "en": "Show toast notification on smart switch transitions? (true / false)"},
+    {"section": "Guc_Yonetimi", "key": "smart_switch_hotkeys_enabled", "default": False, "tr": "Akilli kademe global kisayol tuslari aktif olsun mu? (true / false)", "en": "Enable global keyboard shortcuts for smart tiers? (true / false)"},
+    {"section": "Guc_Yonetimi", "key": "smart_switch_t1_hotkey", "default": "Ctrl+Alt+1", "tr": "Kademe 1 global klavye kisayolu ('Ctrl+Alt+1' .. 'none')", "en": "Tier 1 global keyboard shortcut ('Ctrl+Alt+1' .. 'none')"},
+    {"section": "Guc_Yonetimi", "key": "smart_switch_t2_hotkey", "default": "Ctrl+Alt+2", "tr": "Kademe 2 global klavye kisayolu ('Ctrl+Alt+2' .. 'none')", "en": "Tier 2 global keyboard shortcut ('Ctrl+Alt+2' .. 'none')"},
+    {"section": "Guc_Yonetimi", "key": "smart_switch_t3_hotkey", "default": "Ctrl+Alt+3", "tr": "Kademe 3 global klavye kisayolu ('Ctrl+Alt+3' .. 'none')", "en": "Tier 3 global keyboard shortcut ('Ctrl+Alt+3' .. 'none')"},
+    {"section": "Guc_Yonetimi", "key": "smart_switch_t4_hotkey", "default": "Ctrl+Alt+4", "tr": "Kademe 4 global klavye kisayolu ('Ctrl+Alt+4' .. 'none')", "en": "Tier 4 global keyboard shortcut ('Ctrl+Alt+4' .. 'none')"},
+    {"section": "Genel_Ayarlar", "key": "github_gist_token", "default": "", "tr": "GitHub Gist yedekleme tokeni (sadece yerel saklanir, yedeklenmez)", "en": "GitHub Gist backup token (stored locally only, never uploaded)"},
+    {"section": "Genel_Ayarlar", "key": "github_gist_id", "default": "", "tr": "Ayar yedegi icin kullanilan GitHub Gist ID", "en": "GitHub Gist ID used for settings backup"},
 ]
 
 DEFAULT_CONFIG = {item["key"]: item["default"] for item in CONFIG_METADATA}
+
+
+class _DATA_BLOB(ctypes.Structure):
+    _fields_ = [("cbData", ctypes.c_uint32), ("pbData", ctypes.POINTER(ctypes.c_char))]
+
+
+_DPAPI_ENC_CACHE = {}
+
+
+def encrypt_dpapi(plain: str) -> str:
+    """Windows DPAPI (CryptProtectData) ile metni geçerli kullanıcıya özel şifreler."""
+    plain = (plain or "").strip()
+    if not plain or plain.startswith("dpapi:"):
+        return plain
+    if plain in _DPAPI_ENC_CACHE:
+        return _DPAPI_ENC_CACHE[plain]
+    try:
+        import base64
+        raw = plain.encode("utf-8")
+        buf = ctypes.create_string_buffer(raw, len(raw))
+        blob_in = _DATA_BLOB(len(raw), ctypes.cast(buf, ctypes.POINTER(ctypes.c_char)))
+        blob_out = _DATA_BLOB()
+        if ctypes.windll.crypt32.CryptProtectData(
+            ctypes.byref(blob_in), None, None, None, None, 0x01, ctypes.byref(blob_out)
+        ):
+            try:
+                enc_bytes = ctypes.string_at(blob_out.pbData, blob_out.cbData)
+                res = "dpapi:" + base64.b64encode(enc_bytes).decode("ascii")
+                _DPAPI_ENC_CACHE[plain] = res
+                return res
+            finally:
+                ctypes.windll.kernel32.LocalFree(blob_out.pbData)
+    except Exception:
+        pass
+    return plain
+
+
+def decrypt_dpapi(val: str) -> str:
+    """Windows DPAPI (CryptUnprotectData) ile 'dpapi:...' şifreli metni çözer; düz metinse olduğu gibi döner."""
+    val = (val or "").strip()
+    if not val or not val.startswith("dpapi:"):
+        return val
+    try:
+        import base64
+        enc_bytes = base64.b64decode(val[6:])
+        buf = ctypes.create_string_buffer(enc_bytes, len(enc_bytes))
+        blob_in = _DATA_BLOB(len(enc_bytes), ctypes.cast(buf, ctypes.POINTER(ctypes.c_char)))
+        blob_out = _DATA_BLOB()
+        if ctypes.windll.crypt32.CryptUnprotectData(
+            ctypes.byref(blob_in), None, None, None, None, 0x01, ctypes.byref(blob_out)
+        ):
+            try:
+                dec_bytes = ctypes.string_at(blob_out.pbData, blob_out.cbData)
+                return dec_bytes.decode("utf-8")
+            finally:
+                ctypes.windll.kernel32.LocalFree(blob_out.pbData)
+        return ""
+    except Exception:
+        return ""
 
 
 class ConfigManagerMixin:
@@ -614,6 +645,8 @@ class ConfigManagerMixin:
                 def_v = item["default"]
                 cur_v = self.config.get(k, def_v)
                 val_str = str(cur_v).lower() if isinstance(cur_v, bool) else str(cur_v)
+                if k == "github_gist_token" and val_str:
+                    val_str = encrypt_dpapi(val_str)
                 def_str = str(def_v).lower() if isinstance(def_v, bool) else str(def_v)
                 lines.append(f"; TR: {item['tr']}")
                 lines.append(f"; EN: {item['en']}")
@@ -624,7 +657,7 @@ class ConfigManagerMixin:
 
     def load_config(self):
         self.config = self.DEFAULT_CONFIG.copy()
-        ini_path = get_config_path(self.CONFIG_FILE)
+        ini_path = get_config_path(CONFIG_FILE_NAME)
         self.CONFIG_FILE = ini_path
         loaded = False
         if os.path.exists(ini_path):
@@ -643,6 +676,8 @@ class ConfigManagerMixin:
                             elif isinstance(def_v, float):
                                 try: self.config[k] = float(v)
                                 except ValueError: pass
+                            elif k == "github_gist_token":
+                                self.config[k] = decrypt_dpapi(v)
                             else:
                                 self.config[k] = v
                 loaded = True
@@ -684,8 +719,9 @@ class ConfigManagerMixin:
                     d["watt"] = float(self.config.get("modem_w", 10.0))
                     d["active"] = bool(self.config.get("modem_active", True))
 
-        # Aktif görsel temayı yükle
-        th_key = self.config.get("theme", "obsidian_cyber")
+        # Aktif görsel temayı yükle (auto veya eski tema adıysa Windows sistem moduna göre çöz)
+        th_key = resolve_theme_key(self.config.get("theme", "auto"))
+        self.config["theme"] = th_key
         set_active_theme(th_key)
 
         if not loaded:
@@ -750,6 +786,10 @@ class ConfigManagerMixin:
                 self.config["smart_switch_t3_guid"] = self.smart_switcher.tier3_plan_guid
             if getattr(self.smart_switcher, 'tier4_plan_guid', None):
                 self.config["smart_switch_t4_guid"] = self.smart_switcher.tier4_plan_guid
+            for r in (1, 2, 3, 4):
+                self.config[f"smart_switch_t{r}_hz"] = int(getattr(self.smart_switcher, f"tier{r}_hz", self.config.get(f"smart_switch_t{r}_hz", 0)) or 0)
+                self.config[f"smart_switch_t{r}_hz2"] = int(getattr(self.smart_switcher, f"tier{r}_hz2", self.config.get(f"smart_switch_t{r}_hz2", 0)) or 0)
+            self.config["smart_switch_tier_count"] = int(getattr(self.smart_switcher, 'tier_count', self.config.get("smart_switch_tier_count", 4)) or 4)
         if hasattr(self, 'smart_use_rtss_var'):
             self.config["smart_switch_use_rtss"] = self.smart_use_rtss_var.get()
         if hasattr(self, 'smart_use_watt_var'):
@@ -759,10 +799,27 @@ class ConfigManagerMixin:
         if hasattr(self, 'smart_switch_toast_var'):
             self.config["smart_switch_toast"] = self.smart_switch_toast_var.get()
         try:
-            self.CONFIG_FILE = get_config_path(self.CONFIG_FILE)
+            self.CONFIG_FILE = get_config_path(CONFIG_FILE_NAME)
             content = self._generate_ini_content()
+            if getattr(self, "_last_written_ini", None) == content and os.path.exists(self.CONFIG_FILE):
+                return
             with open(self.CONFIG_FILE, "w", encoding="utf-8") as f:
                 f.write(content)
+            self._last_written_ini = content
+            app_d = os.path.dirname(os.path.abspath(self.CONFIG_FILE))
+            parent_d = os.path.dirname(app_d)
+            if os.path.basename(app_d).lower() == "dist" and os.path.isdir(os.path.join(parent_d, "main")):
+                try:
+                    with open(os.path.join(parent_d, CONFIG_FILE_NAME), "w", encoding="utf-8") as rf:
+                        rf.write(content)
+                except Exception:
+                    pass
+            elif os.path.isdir(os.path.join(app_d, "dist")) and os.path.isdir(os.path.join(app_d, "main")):
+                try:
+                    with open(os.path.join(app_d, "dist", CONFIG_FILE_NAME), "w", encoding="utf-8") as df:
+                        df.write(content)
+                except Exception:
+                    pass
         except Exception:
             pass
 
@@ -787,6 +844,8 @@ def load_config_dict() -> dict:
                         elif isinstance(def_v, float):
                             try: cfg[k] = float(v)
                             except ValueError: pass
+                        elif k == "github_gist_token":
+                            cfg[k] = decrypt_dpapi(v)
                         else:
                             cfg[k] = v
         except Exception:
@@ -809,4 +868,249 @@ def save_config_dict(cfg: dict):
             f.write(content)
     except Exception:
         pass
+
+
+def _find_wattcost_gist_id(token: str) -> str:
+    """Kullanıcının Gist listesinde mevcut WattCost ayar yedeğini otomatik bulur."""
+    import urllib.request
+    token = (token or "").strip()
+    if not token:
+        return ""
+    try:
+        req = urllib.request.Request(
+            "https://api.github.com/gists?per_page=100",
+            method="GET",
+            headers={
+                "Accept": "application/vnd.github+json",
+                "Authorization": f"Bearer {token}",
+                "User-Agent": f"WattCost-HaYTooL/{APP_VERSION}",
+            },
+        )
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            gists = json.loads(resp.read().decode("utf-8"))
+        for g in gists:
+            files = g.get("files") or {}
+            desc = str(g.get("description") or "")
+            if CONFIG_FILE_NAME in files or "WattCost HaYTooL" in desc:
+                return str(g.get("id") or "")
+    except Exception:
+        pass
+    return ""
+
+
+def fetch_github_user_and_backup_gist(token: str) -> tuple:
+    """Token ile GitHub kullanıcı adını, profil resmini (bytes) ve varsa yedek Gist ID'yi döner."""
+    import urllib.request
+    import urllib.error
+
+    token = (token or "").strip()
+    if not token:
+        return False, {}, "Missing token"
+
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "Authorization": f"Bearer {token}",
+        "User-Agent": f"WattCost-HaYTooL/{APP_VERSION}",
+    }
+    try:
+        req = urllib.request.Request("https://api.github.com/user", method="GET", headers=headers)
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            u = json.loads(resp.read().decode("utf-8"))
+        login = str(u.get("login") or "")
+        avatar_url = str(u.get("avatar_url") or "")
+        avatar_bytes = b""
+        if avatar_url:
+            sep = "&" if "?" in avatar_url else "?"
+            av_req = urllib.request.Request(
+                f"{avatar_url}{sep}s=64",
+                headers={"User-Agent": f"WattCost-HaYTooL/{APP_VERSION}"},
+            )
+            try:
+                with urllib.request.urlopen(av_req, timeout=10) as av_resp:
+                    avatar_bytes = av_resp.read()
+            except Exception:
+                avatar_bytes = b""
+
+        found_gist_id = _find_wattcost_gist_id(token)
+        return True, {"login": login, "avatar_bytes": avatar_bytes, "gist_id": found_gist_id}, ""
+    except urllib.error.HTTPError as e:
+        try:
+            err_body = e.read().decode("utf-8", errors="ignore")
+            err_msg = json.loads(err_body).get("message", f"HTTP {e.code}")
+        except Exception:
+            err_msg = f"HTTP {e.code}"
+        return False, {}, err_msg
+    except Exception as e:
+        return False, {}, str(e)
+
+
+def backup_settings_to_gist(token: str, gist_id: str = "") -> tuple:
+    """WattCost. HaYTooL.ini ayarlarını (token hariç) GitHub Secret Gist'e yedekler."""
+    import urllib.request
+    import urllib.error
+    import re as _re
+
+    token = (token or "").strip()
+    gist_id = (gist_id or "").strip()
+    if not token:
+        return False, gist_id, "Missing token"
+
+    ini_path = get_config_path(CONFIG_FILE_NAME)
+    if not os.path.exists(ini_path):
+        return False, gist_id, "INI file not found"
+
+    try:
+        with open(ini_path, "r", encoding="utf-8") as f:
+            raw_ini = f.read()
+        # Güvenlik: GitHub PAT asla Gist içine yüklenmez
+        sanitized_ini = _re.sub(
+            r"(?im)^github_gist_token\s*=.*$",
+            "github_gist_token = ",
+            raw_ini,
+        )
+
+        payload = {
+            "description": f"WattCost HaYTooL v{APP_VERSION} Settings Backup",
+            "public": False,
+            "files": {
+                CONFIG_FILE_NAME: {"content": sanitized_ini}
+            },
+        }
+        if not gist_id:
+            gist_id = _find_wattcost_gist_id(token)
+        url = f"https://api.github.com/gists/{gist_id}" if gist_id else "https://api.github.com/gists"
+        method = "PATCH" if gist_id else "POST"
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(payload).encode("utf-8"),
+            method=method,
+            headers={
+                "Accept": "application/vnd.github+json",
+                "Authorization": f"Bearer {token}",
+                "User-Agent": f"WattCost-HaYTooL/{APP_VERSION}",
+                "Content-Type": "application/json",
+            },
+        )
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            new_id = str(data.get("id", gist_id))
+            html_url = str(data.get("html_url", ""))
+            return True, new_id, html_url
+    except urllib.error.HTTPError as e:
+        try:
+            err_body = e.read().decode("utf-8", errors="ignore")
+            err_msg = json.loads(err_body).get("message", f"HTTP {e.code}")
+        except Exception:
+            err_msg = f"HTTP {e.code}"
+        return False, gist_id, err_msg
+    except Exception as e:
+        return False, gist_id, str(e)
+
+
+def restore_settings_from_gist(gist_id: str, token: str = "") -> tuple:
+    """Belirtilen GitHub Gist ID'den WattCost. HaYTooL.ini ayarlarını indirip uygular."""
+    import urllib.request
+    import urllib.error
+
+    gist_id = (gist_id or "").strip()
+    token = (token or "").strip()
+    if not gist_id and token:
+        gist_id = _find_wattcost_gist_id(token)
+    if not gist_id:
+        return False, "No backup Gist found"
+
+    # Tam URL yapıştırıldıysa sondaki ID'yi çıkar
+    if "/" in gist_id:
+        gist_id = gist_id.rstrip("/").split("/")[-1]
+
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "User-Agent": f"WattCost-HaYTooL/{APP_VERSION}",
+    }
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+
+    try:
+        req = urllib.request.Request(
+            f"https://api.github.com/gists/{gist_id}",
+            method="GET",
+            headers=headers,
+        )
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+
+        files = data.get("files", {})
+        ini_content = None
+        if CONFIG_FILE_NAME in files:
+            ini_content = files[CONFIG_FILE_NAME].get("content")
+        else:
+            for fname, fobj in files.items():
+                if fname.lower().endswith(".ini") and fobj.get("content"):
+                    ini_content = fobj["content"]
+                    break
+        if not ini_content:
+            return False, "No .ini file found in Gist"
+
+        ini_path = get_config_path(CONFIG_FILE_NAME)
+        with open(ini_path, "w", encoding="utf-8") as f:
+            f.write(ini_content)
+        return True, gist_id
+    except urllib.error.HTTPError as e:
+        try:
+            err_body = e.read().decode("utf-8", errors="ignore")
+            err_msg = json.loads(err_body).get("message", f"HTTP {e.code}")
+        except Exception:
+            err_msg = f"HTTP {e.code}"
+        return False, err_msg
+    except Exception as e:
+        return False, str(e)
+
+
+def fetch_gist_ini_preview(gist_id: str, token: str = "") -> tuple:
+    """GitHub Gist'teki kayıtlı INI içeriğini ve son güncelleme tarihini uygula-madan okur."""
+    gist_id = (gist_id or "").strip()
+    token = (token or "").strip()
+    if not gist_id and token:
+        gist_id = _find_wattcost_gist_id(token)
+    if not gist_id:
+        return False, "No backup Gist found", ""
+
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "User-Agent": f"WattCost-HaYTooL/{APP_VERSION}",
+    }
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+
+    try:
+        req = urllib.request.Request(
+            f"https://api.github.com/gists/{gist_id}",
+            method="GET",
+            headers=headers,
+        )
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+
+        files = data.get("files", {})
+        ini_content = None
+        if CONFIG_FILE_NAME in files:
+            ini_content = files[CONFIG_FILE_NAME].get("content")
+        else:
+            for fname, fobj in files.items():
+                if fname.lower().endswith(".ini") and fobj.get("content"):
+                    ini_content = fobj["content"]
+                    break
+        if not ini_content:
+            return False, "No .ini file found in Gist", ""
+        return True, ini_content, str(data.get("updated_at") or "")
+    except urllib.error.HTTPError as e:
+        try:
+            err_body = e.read().decode("utf-8", errors="ignore")
+            err_msg = json.loads(err_body).get("message", f"HTTP {e.code}")
+        except Exception:
+            err_msg = f"HTTP {e.code}"
+        return False, err_msg, ""
+    except Exception as e:
+        return False, str(e), ""
+
 

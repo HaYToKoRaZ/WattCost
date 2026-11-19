@@ -3,7 +3,7 @@
 # ⚡ WattCost HaYTooL
 ### Real-Time PC Wall Power, Electricity Cost Tracker & Smart Automation Engine
 
-[![GitHub release](https://img.shields.io/badge/Release-v5.9-0ea5e9?style=for-the-badge&logo=github)](https://github.com/HaYToKoRaZ/WattCost/releases)
+[![GitHub release](https://img.shields.io/badge/Release-v7.5-0ea5e9?style=for-the-badge&logo=github)](https://github.com/HaYToKoRaZ/WattCost/releases)
 [![Platform](https://img.shields.io/badge/Platform-Windows%2010%20%7C%2011-0078D6?style=for-the-badge&logo=windows)](https://www.microsoft.com/windows)
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-10B981?style=for-the-badge)](LICENSE)
@@ -66,6 +66,15 @@
 - **🎧 Dual Headset Battery Telemetry (SteelSeries & Bluetooth):**
   - **SteelSeries Wireless Headsets:** Direct USB HID protocol communication (Arctis 7, Arctis 7+, Arctis Pro, GameDAC) reading accurate battery level percentage and remaining operational time without requiring the bloat of proprietary software.
   - **Bluetooth Headsets (Windows HFP):** Reads battery percentage for any paired Bluetooth audio devices (Sony, Apple, QCY, JBL, etc.) using native Windows Bluetooth APIs and displays it both in the GUI and in-game RTSS OSD.
+- **📊 Weekly / Monthly / Yearly Billing Report & Format-Resilient Portable Data:**
+  - Inspect exact consumption, average wattage, active hours, and electricity cost per day (including day-of-week lookups like *"Last Tuesday"*), per week, per month, and per year.
+  - Saves consumption atomically (`.tmp` + `.bak`) to `WattCost. HaYTooL.json` right next to the `.exe`; after a Windows reinstall/format, keeping that file automatically resumes all totals seamlessly.
+- **☁️ GitHub Gist Settings Sync & Windows DPAPI Security:**
+  - Paste a GitHub `gist`-scoped token once to auto-display your avatar/username, auto-match your Secret Gist ID, preview saved `.ini` settings, and auto-sync changes in the background. Locally stored tokens are encrypted via Windows DPAPI (`CryptProtectData`).
+- **🎨 Light / Dark / Matrix Themes, Themed Tray & Multi-User `--hide` Mode:**
+  - Automatically matches your Windows Light/Dark mode on first launch, themes both Settings and the custom system tray right-click menu, and supports `--hide` / `hide` (ideal for Task Scheduler on secondary Windows accounts: zero window/tray icon, read-only `.ini`, keeps energy logging & Zalman LCD active).
+- **⌨️ Global Tier Hotkeys & Dual-Monitor Support:**
+  - Optional global shortcuts for SmartSwitch Tiers K1–K4 (`Ctrl+Alt+1..4`, disabled by default), configurable in Settings, alongside independent dual-monitor Hz scaling and an in-app live OSD Test Screen.
 
 ---
 
@@ -110,15 +119,19 @@ All preferences are stored in the easily editable `WattCost. HaYTooL.ini` file:
 | Section | Key | Default | Description |
 | :--- | :--- | :--- | :--- |
 | `[Genel_Ayarlar]` | `language` | `auto` | UI language (`auto`, `tr`, `en`) |
-| `[Genel_Ayarlar]` | `theme` | `obsidian_cyber` | GUI theme style |
+| `[Genel_Ayarlar]` | `theme` | `auto` | GUI & tray theme (`auto`, `light`, `dark`, `matrix`) |
 | `[Genel_Ayarlar]` | `close_to_tray` | `true` | Minimize to system tray on window close |
+| `[Genel_Ayarlar]` | `github_gist_token` | `""` | Locally DPAPI-encrypted GitHub token (`dpapi:...`, never uploaded) |
+| `[Genel_Ayarlar]` | `github_gist_id` | `""` | Auto-matched Secret Gist ID for settings backup |
 | `[Tarife_Ve_Donanim]` | `kwh_price_tl` | `4.86` | Electricity price per kWh |
 | `[Tarife_Ve_Donanim]` | `case_base_w` | `46.7` | Idle chassis motherboard and fan baseline (W) |
 | `[Tarife_Ve_Donanim]` | `psu_efficiency` | `0.85` | Power Supply 80+ efficiency rating |
 | `[RTSS_Oyun_Ici_Gosterge]` | `rtss_enabled` | `true` | Enable RTSS game overlay hook |
 | `[RTSS_Oyun_Ici_Gosterge]` | `rtss_hotkey` | `Alt+Shift+R` | In-game OSD toggle shortcut |
 | `[Guc_Yonetimi]` | `smart_switch_enabled` | `false` | Enable automated 4-tier power plan switching |
+| `[Guc_Yonetimi]` | `smart_switch_tier_count` | `4` | Active SmartSwitch tier count (`2`, `3`, or `4`) |
 | `[Guc_Yonetimi]` | `smart_switch_hz_enabled` | `true` | Enable dynamic monitor refresh rate scaling |
+| `[Guc_Yonetimi]` | `smart_switch_hotkeys_enabled` | `false` | Enable global K1–K4 tier hotkeys (`Ctrl+Alt+1..4`) |
 | `[Zalman_Pompa]` | `zalman_active` | `true` | Forward hardware temps to Zalman Alpha2 LCD |
 
 ---
@@ -142,10 +155,18 @@ WattCost. HaYTooL.exe --smart off
 WattCost. HaYTooL.exe --smart toggle
 
 # RTSS OSD overlay controls
+WattCost. HaYTooL.exe --osd on
+WattCost. HaYTooL.exe --osd off
 WattCost. HaYTooL.exe --osd toggle
+
+# Bring running window to front and open a specific tab
+WattCost. HaYTooL.exe --tab smart
 
 # Set monitor refresh rate
 WattCost. HaYTooL.exe --hz 144
+
+# Silent headless daemon for secondary Windows users (Task Scheduler: no tray icon, read-only INI)
+"WattCost. HaYTooL.exe" --hide
 ```
 
 ---
@@ -189,6 +210,15 @@ WattCost. HaYTooL.exe --hz 144
 - **🎧 Çift Kanallı Kulaklık Batarya Takibi (SteelSeries & Bluetooth):**
   - **SteelSeries Kablosuz Kulaklıklar:** Üreticinin ağır yazılımına ihtiyaç duymadan USB HID protokolü ile doğrudan iletişim kurarak (Arctis 7, Arctis 7+, Arctis Pro vb.) net şarj yüzdesi ve tahmini kalan kullanım süresini okur.
   - **Bluetooth Kulaklıklar (Windows HFP):** Eşleştirilmiş tüm Bluetooth kulaklıkların (Sony, Apple, QCY, JBL vb.) batarya yüzdesini yerel Windows API'leri üzerinden anlık okuyarak hem arayüze hem de oyun içi RTSS OSD göstergesine yansıtır.
+- **📊 Haftalık / Aylık / Yıllık Fatura Raporu & Formatta Korunan Taşınabilir Veri:**
+  - *"Geçen hafta Salı günü ne kadar harcadım?"* dahil gün adı, ortalama güç (W), aktif süre, kWh ve maliyet dökümüyle Haftalık, Geçen Hafta, Aylık ve Yıllık analiz ekranı.
+  - Tüketim verileri doğrudan EXE yanındaki `WattCost. HaYTooL.json` dosyasına atomik (`.tmp` + `.bak`) olarak yazılır; Windows formatı sonrasında bu dosya aynı klasörde bulunduğunda uygulama kaldığı yerden kesintisiz devam eder.
+- **☁️ GitHub Gist Bulut Ayar Yedeği & Windows DPAPI Güvenliği:**
+  - Yalnızca `gist` yetkili token yapıştırıldığında GitHub avatarınızı ve `@kullaniciadi` bilginizi ana ekrana taşır, mevcut yedek Gist'inizi otomatik eşleştirir, **👁️ Yedeği Gör** ile önizleme sunar ve değişen ayarları otomatik yedekler. Yerel token Windows DPAPI (`CryptProtectData`) ile şifreli tutulur.
+- **🎨 Açık / Koyu / Matrix Temalar, Temalı Tray & Çoklu-Kullanıcı `--hide` Modu:**
+  - İlk açılışta Windows Açık/Koyu modunu otomatik algılar, saat yanı özel sağ tık menüsünü temayla eşler ve ikincil Windows hesapları (Görev Zamanlayıcı) için `--hide` / `hide` modu sunar (pencere ve tray simgesi olmadan enerji kaydı + Zalman LCD pompayı çalıştırır, mevcut `.ini` ayarlarını salt-okunur korur).
+- **⌨️ Akıllı Kademe Kısayolları & Çift Monitör Desteği:**
+  - K1–K4 güç kademelerine Ayarlar'dan açılıp düzenlenebilen global kısayollar (`Ctrl+Alt+1..4`, varsayılan kapalı), çift monitör bağımsız Hz yönetimi ve masaüstü canlı OSD Test Ekranı.
 
 ---
 
@@ -233,15 +263,19 @@ Tüm ayarlar `WattCost. HaYTooL.ini` dosyasında tutulur ve elle düzenlenebilir
 | Bölüm | Anahtar | Varsayılan | Açıklama |
 | :--- | :--- | :--- | :--- |
 | `[Genel_Ayarlar]` | `language` | `auto` | Arayüz dili (`auto`, `tr`, `en`) |
-| `[Genel_Ayarlar]` | `theme` | `obsidian_cyber` | Arayüz renk teması |
+| `[Genel_Ayarlar]` | `theme` | `auto` | Arayüz ve tray renk teması (`auto`, `light`, `dark`, `matrix`) |
 | `[Genel_Ayarlar]` | `close_to_tray` | `true` | Kapatıldığında saatin yanına küçült |
+| `[Genel_Ayarlar]` | `github_gist_token` | `""` | Yerelde DPAPI ile şifreli GitHub token (`dpapi:...`, yüklenmez) |
+| `[Genel_Ayarlar]` | `github_gist_id` | `""` | Ayar yedeği için otomatik eşlenen Gizli Gist ID |
 | `[Tarife_Ve_Donanim]` | `kwh_price_tl` | `4.86` | Elektrik kWh birim fiyatı (TL) |
 | `[Tarife_Ve_Donanim]` | `case_base_w` | `46.7` | Kasa boştaki anakart ve fan taban gücü (W) |
 | `[Tarife_Ve_Donanim]` | `psu_efficiency` | `0.85` | Güç kaynağı 80+ verimlilik katsayısı |
 | `[RTSS_Oyun_Ici_Gosterge]` | `rtss_enabled` | `true` | RTSS göstergesini etkinleştir |
 | `[RTSS_Oyun_Ici_Gosterge]` | `rtss_hotkey` | `Alt+Shift+R` | Gösterge kısayol tuşu |
 | `[Guc_Yonetimi]` | `smart_switch_enabled` | `false` | 4 kademeli akıllı geçiş motorunu aç |
+| `[Guc_Yonetimi]` | `smart_switch_tier_count` | `4` | Akıllı geçiş kademe sayısı (`2`, `3` veya `4`) |
 | `[Guc_Yonetimi]` | `smart_switch_hz_enabled` | `true` | Dinamik monitör Hz değişimini aç |
+| `[Guc_Yonetimi]` | `smart_switch_hotkeys_enabled` | `false` | K1–K4 global kısayollarını aç (`Ctrl+Alt+1..4`) |
 | `[Zalman_Pompa]` | `zalman_active` | `true` | Sıcaklıkları Zalman LCD pompaya gönder |
 
 ---
@@ -265,10 +299,18 @@ WattCost. HaYTooL.exe --smart off
 WattCost. HaYTooL.exe --smart toggle
 
 # RTSS OSD gostergesini acar / kapatir
+WattCost. HaYTooL.exe --osd on
+WattCost. HaYTooL.exe --osd off
 WattCost. HaYTooL.exe --osd toggle
+
+# Acik pencereyi one getirip belirtilen sekmeye gecer
+WattCost. HaYTooL.exe --tab smart
 
 # Monitor yenileme hizini ayarlar
 WattCost. HaYTooL.exe --hz 144
+
+# Ikincil Windows hesaplari icin penceresiz ve tray simgesiz gizli baslangic (yeni INI olusturmaz)
+"WattCost. HaYTooL.exe" --hide
 ```
 
 ---

@@ -90,7 +90,7 @@ HIDDEN_POWER_SETTING_PAIRS = [
     ("4f971e89-eebd-4455-a8de-9e59040e7347", "96996bc0-ad50-47ec-923b-6f41874dd9eb"), # Uyku Düğmesi Eylemi
 ]
 
-@dataclass
+@dataclass(slots=True)
 class PowerPlanItem:
     guid: str
     name: str
@@ -111,7 +111,7 @@ class PowerPlanItem:
             return "🌱"
         return "⚖️"
 
-@dataclass
+@dataclass(slots=True)
 class PowerPlanSettings:
     guid: str = ""
     name: str = ""
@@ -1171,9 +1171,10 @@ class SmartAutoSwitcher:
     # ------------------------------------------------------------- kademe yardımcıları
     @staticmethod
     def _tier_rank(tier) -> int:
-        """'tier3' -> 3"""
+        """'tier3', 'Tier 3', 3 -> 3"""
         try:
-            return int(str(tier).replace("tier", ""))
+            digits = re.sub(r"[^0-9]", "", str(tier or ""))
+            return max(1, min(4, int(digits))) if digits else 1
         except (TypeError, ValueError):
             return 1
 
@@ -1326,10 +1327,12 @@ class SmartAutoSwitcher:
 
     def _apply_tier(self, tier: str, reason: str = ""):
         rank = self._tier_rank(tier)
+        tier = f"tier{rank}"
 
         # İlgili kademenin güç planını belirle (istenen kademeden başlayan fallback zinciri)
         target_guid = ""
-        order = [rank] + [r for r in range(self.tier_count, 0, -1) if r != rank]
+        max_r = max(self.tier_count, rank)
+        order = [rank] + [r for r in range(max_r, 0, -1) if r != rank]
         candidates = []
         for r in order:
             guid = str(getattr(self, f"tier{r}_plan_guid", "") or "")
@@ -1365,7 +1368,9 @@ class SmartAutoSwitcher:
         ok = PowerManagerService.set_active_plan(target_guid)
         if ok or target_hz > 0 or target_hz2 > 0:
             self.current_tier = tier
+            self._candidate_tier = tier
             self._streak_count = 0
 
             if self.on_plan_switched:
                 self.on_plan_switched(tier, target_guid, target_hz, reason, hz_actual, hz_ok)
+        return ok

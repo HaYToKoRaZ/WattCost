@@ -29,5 +29,7 @@ scratch_*
 # --- Kullaniciya Ozel Ayarlar ve Veritabani ---
 WattCost. HaYTooL.ini
 WattCost. HaYTooL.json
+WattCost. HaYTooL.json.bak
+*.json.bak
 main/WattCost. HaYTooL.ini
 main/WattCost. HaYTooL.json

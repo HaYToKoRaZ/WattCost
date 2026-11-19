@@ -230,30 +230,46 @@ class SmartSwitchTabMixin:
             om_hz2.grid(row=0, column=3, sticky="ew")
             self.add_tooltip(om_hz2, lambda t=title: _t("smart_tier_hz2_tip", "{title} devreye girdiğinde 2. monitörün çalışacağı yenileme hızı (Hz)").format(title=t))
 
-            return f_box, om_plan, om_hz, om_hz2
+            # 3. Satır: Global Klavye Kısayolu
+            lbl_hk = tk.Label(f_form, text=_t("smart_lbl_hotkey", "Kısayol:"), font=(f_font, fs(7), "bold"),
+                              fg=THEME["text_secondary"], bg=THEME["card_inner"], anchor="w")
+            lbl_hk.grid(row=2, column=0, sticky="w", padx=(0, 6), pady=(4, 0))
 
-        f_t1, self.om_t1_plan, self.om_t1_hz, self.om_t1_hz2 = _build_tier_card(
+            hk_var = getattr(self, f"smart_t{tier_num}_hotkey_var", None)
+            if hk_var is None:
+                hk_var = tk.StringVar(value=str(self.config.get(f"smart_switch_t{tier_num}_hotkey", f"Ctrl+Alt+{tier_num}") or "none"))
+                setattr(self, f"smart_t{tier_num}_hotkey_var", hk_var)
+
+            om_hk = tk.OptionMenu(f_form, hk_var, "")
+            om_hk.config(bg=THEME["card_bg"], fg=THEME["accent_green"], activebackground=THEME["card_inner"],
+                         relief="flat", highlightthickness=1, font=(f_font, fs(7), "bold"), anchor="w")
+            om_hk.grid(row=2, column=1, sticky="ew", pady=(4, 0))
+            self.add_tooltip(om_hk, lambda t=title: _t("smart_tier_hotkey_tip", "{title} kademesini doğrudan aktif eden global klavye kısayolu (seçildiğinde otomasyon manuel moda geçer)").format(title=t))
+
+            return f_box, om_plan, om_hz, om_hz2, om_hk
+
+        f_t1, self.om_t1_plan, self.om_t1_hz, self.om_t1_hz2, self.om_t1_hk = _build_tier_card(
             f_grid, 1, _t("smart_t1_title", "🌱 KADEME 1: BOŞTA / ULTRA TASARRUF"), THEME["accent_green"],
             self.smart_t1_guid_var, self.smart_t1_hz_var, self.smart_t1_hz2_var,
             _t("smart_t1_sub", "Sistem dinlenirken (GPU < Eşik 2 & CPU < Eşik 2). Minimum güç tüketimi.")
         )
         f_t1.grid(row=0, column=0, sticky="nsew", padx=(0, 4), pady=(0, 4))
 
-        f_t2, self.om_t2_plan, self.om_t2_hz, self.om_t2_hz2 = _build_tier_card(
+        f_t2, self.om_t2_plan, self.om_t2_hz, self.om_t2_hz2, self.om_t2_hk = _build_tier_card(
             f_grid, 2, t2_title, THEME["accent_cyan"],
             self.smart_t2_guid_var, self.smart_t2_hz_var, self.smart_t2_hz2_var,
             t2_sub
         )
         f_t2.grid(row=0, column=1, sticky="nsew", padx=(4, 0), pady=(0, 4))
 
-        f_t3, self.om_t3_plan, self.om_t3_hz, self.om_t3_hz2 = _build_tier_card(
+        f_t3, self.om_t3_plan, self.om_t3_hz, self.om_t3_hz2, self.om_t3_hk = _build_tier_card(
             f_grid, 3, t3_title, THEME["accent_amber"],
             self.smart_t3_guid_var, self.smart_t3_hz_var, self.smart_t3_hz2_var,
             t3_sub
         )
         f_t3.grid(row=1, column=0, sticky="nsew", padx=(0, 4), pady=(4, 0))
 
-        f_t4, self.om_t4_plan, self.om_t4_hz, self.om_t4_hz2 = _build_tier_card(
+        f_t4, self.om_t4_plan, self.om_t4_hz, self.om_t4_hz2, self.om_t4_hk = _build_tier_card(
             f_grid, 4, _t("smart_t4_title", "🎮 KADEME 4: MAKSİMUM / OYUN & RENDER"), THEME["accent_rose"],
             self.smart_t4_guid_var, self.smart_t4_hz_var, self.smart_t4_hz2_var,
             _t("smart_t4_sub", "Ağır yük, render, RTSS 3D oyun veya yüksek priz watt çekişi (≥ Eşik 4).")
@@ -743,25 +759,18 @@ class SmartSwitchTabMixin:
 
     def on_smart_plan_switched(self, tier, guid, target_hz=0, reason="", hz_actual=None, hz_ok=None):
         def _apply():
+            rank = self.smart_switcher._tier_rank(tier)
+            tier_key = f"tier{rank}"
             tier_info = {
                 "tier4": (_t("smart_t4_title", "KADEME 4: OYUN / MAKSİMUM PERFORMANS"), THEME["accent_rose"], "🎮"),
                 "tier3": (_t("smart_t3_title", "KADEME 3: ÇOKLU GÖREV / ORTA YÜK"), THEME["accent_amber"], "⚖️"),
                 "tier2": (_t("smart_t2_title", "KADEME 2: GÜNLÜK / MEDYA & WEB"), THEME["accent_cyan"], "🌿"),
                 "tier1": (_t("smart_t1_title", "KADEME 1: BOŞTA / ULTRA TASARRUF"), THEME["accent_green"], "🌱"),
             }
-            t_data = tier_info.get(tier, (f"KADEME {tier}", THEME["accent_cyan"], "⚡"))
+            t_data = tier_info.get(tier_key, (f"KADEME {rank}", THEME["accent_cyan"], "⚡"))
             tier_str, col, icon = t_data[0], t_data[1], t_data[2]
-            hz_info = ""
-            if target_hz and int(target_hz) > 0:
-                if hz_ok is None:
-                    hz_info = f" · {int(target_hz)} Hz"
-                elif hz_ok:
-                    hz_info = f" · {int(target_hz)} Hz ✓"
-                else:
-                    hz_info = f" · {int(target_hz)} Hz ✕ (ekran {hz_actual} Hz)"
-            reason_info = f" ({reason})" if reason else ""
+            self._last_detected_plan_guid = str(guid).lower()
             if hasattr(self, 'lbl_smart_status') and self.lbl_smart_status.winfo_exists():
-                rank = self.smart_switcher._tier_rank(tier)
                 hz_short = f" · {int(target_hz)} Hz" if target_hz and int(target_hz) > 0 else ""
                 self.lbl_smart_status.config(
                     text=_t("smart_status_active_short", "● Kademe {n}{hz}").format(n=rank, hz=hz_short),
@@ -791,7 +800,11 @@ class SmartSwitchTabMixin:
                     hz=target_hz,
                     play_sound=False
                 )
-            self._last_detected_plan_guid = str(guid).lower()
+            if hasattr(self, 'tray_icon') and self.tray_icon:
+                try:
+                    self.tray_icon.update_menu()
+                except Exception:
+                    pass
         try:
             self.root.after(0, _apply)
         except RuntimeError:
@@ -956,6 +969,14 @@ class SmartSwitchTabMixin:
             if not om_hz or not om_hz.winfo_exists() or var_hz is None:
                 continue
 
+            attr_name = f"tier{t_idx}_hz" if mon_no == 1 else f"tier{t_idx}_hz2"
+            cfg_key = f"smart_switch_t{t_idx}_hz" if mon_no == 1 else f"smart_switch_t{t_idx}_hz2"
+            cur_hz_val = int(cur_hz_val or 0)
+            if cur_hz_val <= 0:
+                cur_hz_val = int(self.config.get(cfg_key, 0) or 0)
+                if cur_hz_val > 0:
+                    setattr(self.smart_switcher, attr_name, cur_hz_val)
+
             m_hz = om_hz["menu"]
             m_hz.delete(0, "end")
             m_hz.config(
@@ -970,12 +991,13 @@ class SmartSwitchTabMixin:
 
             if not rates:
                 m_hz.add_command(label=no_mon2_lbl, command=lambda: None)
-                var_hz.set(no_mon2_lbl)
+                var_hz.set(f"🖥️ {cur_hz_val} Hz" if cur_hz_val > 0 else no_mon2_lbl)
                 continue
 
+            menu_rates = sorted(set(rates) | ({cur_hz_val} if cur_hz_val > 0 else set()))
             m_hz.add_command(label=f"⚪ {no_change_lbl}",
                              command=lambda idx=t_idx, mn=mon_no: self._set_smart_tier_hz(idx, 0, mn))
-            for rate in rates:
+            for rate in menu_rates:
                 m_hz.add_command(label=f"🖥️ {rate} Hz",
                                  command=lambda idx=t_idx, r=rate, mn=mon_no: self._set_smart_tier_hz(idx, r, mn))
 
@@ -983,6 +1005,59 @@ class SmartSwitchTabMixin:
                 var_hz.set(f"🖥️ {cur_hz_val} Hz")
             else:
                 var_hz.set(f"⚪ {no_change_lbl}")
+
+        # 3. Kademe Kısayol Menülerini Doldur
+        from hotkey_manager import TIER_HOTKEY_OPTIONS
+        none_hk_lbl = _t("smart_hotkey_none", "Yok (Kapalı)")
+        hk_disp_map = {code: (none_hk_lbl if code == "none" else disp) for code, disp in TIER_HOTKEY_OPTIONS}
+        for t_idx in (1, 2, 3, 4):
+            om_hk = getattr(self, f"om_t{t_idx}_hk", None)
+            var_hk = getattr(self, f"smart_t{t_idx}_hotkey_var", None)
+            if not om_hk or not om_hk.winfo_exists() or var_hk is None:
+                continue
+            m_hk = om_hk["menu"]
+            m_hk.delete(0, "end")
+            m_hk.config(
+                bg=THEME["card_bg"],
+                fg=THEME["text_primary"],
+                activebackground=THEME["card_inner"],
+                activeforeground=THEME["accent_green"],
+                font=(f_font, fs(7), "bold"),
+                relief="flat",
+                bd=1
+            )
+            for code, disp in TIER_HOTKEY_OPTIONS:
+                lbl_hk = none_hk_lbl if code == "none" else f"⌨️ {disp}"
+                m_hk.add_command(
+                    label=lbl_hk,
+                    command=lambda idx=t_idx, k=code: self._set_smart_tier_hotkey(idx, k)
+                )
+            cur_code = str(self.config.get(f"smart_switch_t{t_idx}_hotkey", f"Ctrl+Alt+{t_idx}") or "none")
+            cur_disp = hk_disp_map.get(cur_code, cur_code)
+            var_hk.set(none_hk_lbl if cur_code == "none" else f"⌨️ {cur_disp}")
+
+    def _set_smart_tier_hotkey(self, tier_idx: int, key_code: str):
+        """Kademenin global klavye kısayolunu kaydeder ve dinleyiciyi günceller."""
+        if tier_idx not in (1, 2, 3, 4):
+            return
+        from hotkey_manager import TIER_HOTKEY_OPTIONS
+        none_hk_lbl = _t("smart_hotkey_none", "Yok (Kapalı)")
+        hk_disp_map = {code: (none_hk_lbl if code == "none" else disp) for code, disp in TIER_HOTKEY_OPTIONS}
+
+        self.config[f"smart_switch_t{tier_idx}_hotkey"] = key_code
+        var_hk = getattr(self, f"smart_t{tier_idx}_hotkey_var", None)
+        if var_hk is not None:
+            disp = hk_disp_map.get(key_code, key_code)
+            var_hk.set(none_hk_lbl if key_code == "none" else f"⌨️ {disp}")
+        self.save_config()
+
+        if hasattr(self, 'register_all_hotkeys'):
+            self.register_all_hotkeys()
+        if hasattr(self, 'tray_icon') and self.tray_icon:
+            try:
+                self.tray_icon.update_menu()
+            except Exception:
+                pass
 
     def _set_smart_tier_hz(self, tier_idx: int, hz: int, monitor: int = 1):
         """Kademenin 1. veya 2. monitör Hz hedefini kaydeder."""
@@ -1005,10 +1080,19 @@ class SmartSwitchTabMixin:
             var.set(disp_txt)
         self.save_config()
 
+        if hasattr(self, 'tray_icon') and self.tray_icon:
+            try:
+                self.tray_icon.update_menu()
+            except Exception:
+                pass
+
         # Değiştirilen kademe şu an aktifse hemen uygula
         try:
-            if self.smart_switcher.enabled and self.smart_switcher._tier_rank(self.smart_switcher.current_tier) == tier_idx:
-                self.smart_switcher.force_apply_current()
+            if self.smart_switcher._tier_rank(self.smart_switcher.current_tier) == tier_idx:
+                if self.smart_switcher.enabled:
+                    self.smart_switcher.force_apply_current()
+                elif self.smart_switcher.hz_enabled and hz > 0:
+                    self.smart_switcher._apply_hz_targets(tier_idx)
         except Exception:
             pass
 

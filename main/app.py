@@ -18,6 +18,138 @@ import ctypes
 import os
 import re
 import sys
+
+# RTSS bekçi alt süreci (--watch) yalnızca hedef PID kapanınca paylaşımlı belleği temizler.
+# GUI/Tkinter/Pillow/pystray modüllerini yüklemeden önce erken çıkış yaparak ~20 MB RAM tasarrufu sağlar.
+if __name__ == "__main__" and len(sys.argv) >= 3 and sys.argv[1] == "--watch":
+    from rtss_overlay import _watch_and_clear
+    _watch_and_clear(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else "WattCost")
+    sys.exit(0)
+
+
+def run_hidden_daemon():
+    """Pencere ve sistem tepsisi açmadan yalnızca sensör, tüketim kaydı ve Zalman LCD pompa çalıştırır.
+    Mevcut INI dosyasını salt-okunur okur; asla yeni INI oluşturmaz veya üzerine yazmaz.
+    """
+    import atexit
+    import signal
+    import time as _time
+    from config_manager import load_config_dict, calculate_wall_power_w
+    from sensor_reader import UnifiedSensorReader
+    from history_manager import HistoryManager
+
+    # Oturum bazlı tekil örnek (Local\... yalnızca o Windows kullanıcı oturumuna özeldir)
+    mutex = ctypes.windll.kernel32.CreateMutexW(None, False, "Local\\WattCostHiddenDaemon")
+    if ctypes.windll.kernel32.GetLastError() == 183:  # ERROR_ALREADY_EXISTS
+        return
+
+    stop_flag = [False]
+    atexit.register(HistoryManager.flush_history)
+
+    def _on_stop(*_args):
+        stop_flag[0] = True
+        HistoryManager.flush_history()
+
+    for sig_name in ("SIGINT", "SIGTERM", "SIGBREAK"):
+        sig = getattr(signal, sig_name, None)
+        if sig is not None:
+            try:
+                signal.signal(sig, _on_stop)
+            except Exception:
+                pass
+
+    cfg = load_config_dict()
+    reader = UnifiedSensorReader()
+    zalman = None
+    if cfg.get("zalman_active", True):
+        try:
+            from zalman_display import ZalmanDisplay
+            zalman = ZalmanDisplay(update_interval=0.25)
+            zalman.set_enabled(True)
+            zalman.start_background_loop()
+        except Exception:
+            zalman = None
+
+    last_t = _time.time()
+    cycle_start = last_t
+    last_cfg_reload = last_t
+
+    try:
+        while not stop_flag[0]:
+            _time.sleep(1.0)
+            now = _time.time()
+            dt = max(0.1, min(10.0, now - last_t))
+            last_t = now
+
+            # Her 30 sn'de ana kullanıcının INI değişikliklerini salt-okunur yeniden yükle
+            if now - last_cfg_reload >= 30.0:
+                cfg = load_config_dict()
+                last_cfg_reload = now
+
+            sensors = reader.read_sensors()
+            if not sensors:
+                continue
+
+            try: cpu_w = float(sensors.get("PCPUPKG", 0.0))
+            except (TypeError, ValueError): cpu_w = 0.0
+            try: gpu_w = float(sensors.get("PGPU1", 0.0))
+            except (TypeError, ValueError): gpu_w = 0.0
+            try: cpu_temp = int(float(sensors.get("TCPU", sensors.get("TCPUPKG", 0.0))))
+            except (TypeError, ValueError): cpu_temp = 0
+            try: gpu_temp = int(float(sensors.get("TGPU1", 0.0)))
+            except (TypeError, ValueError): gpu_temp = 0
+
+            if zalman is not None:
+                z_on = bool(cfg.get("zalman_active", True))
+                zalman.set_enabled(z_on)
+                if z_on:
+                    z_src = str(cfg.get("zalman_source", "cpu") or "cpu")
+                    if z_src == "cycle":
+                        t_dur = max(1, int(cfg.get("zalman_temp_sec", 10) or 10))
+                        b_dur = max(1, int(cfg.get("zalman_blank_sec", 4) or 4))
+                        half = t_dur + b_dur
+                        phase = (now - cycle_start) % (half * 2)
+                        if phase < t_dur:
+                            zalman.set_blank(False)
+                            zalman.set_temperature(cpu_temp)
+                        elif phase < half:
+                            zalman.set_blank(True)
+                        elif phase < half + t_dur:
+                            zalman.set_blank(False)
+                            zalman.set_temperature(gpu_temp)
+                        else:
+                            zalman.set_blank(True)
+                    elif z_src == "gpu":
+                        zalman.set_blank(False)
+                        zalman.set_temperature(gpu_temp)
+                    elif z_src == "max":
+                        zalman.set_blank(False)
+                        zalman.set_temperature(max(cpu_temp, gpu_temp))
+                    else:
+                        zalman.set_blank(False)
+                        zalman.set_temperature(cpu_temp)
+
+            total_wall_w = calculate_wall_power_w(cpu_w, gpu_w, cfg)
+            price = float(cfg.get("kwh_price_tl", 2.60) or 2.60)
+            HistoryManager.add_energy(total_wall_w * (dt / 3600.0), price)
+    finally:
+        HistoryManager.flush_history()
+        if zalman is not None:
+            try:
+                zalman.stop_background_loop()
+            except Exception:
+                pass
+        if mutex:
+            try:
+                ctypes.windll.kernel32.CloseHandle(mutex)
+            except Exception:
+                pass
+
+
+if __name__ == "__main__" and any(a.lower() in ("--hide", "hide") for a in sys.argv[1:]):
+    run_hidden_daemon()
+    sys.exit(0)
+
 import threading
 import time
 import tkinter as tk
@@ -31,7 +163,8 @@ from config_manager import (
     start_instance_listener,
     get_asset_path,
     ConfigManagerMixin,
-    APP_VERSION
+    APP_VERSION,
+    calculate_wall_power_w
 )
 from language_manager import LanguageManager, _t
 from sensor_reader import UnifiedSensorReader
@@ -106,7 +239,6 @@ class PowerTrackerApp(
         # Sensör ve RTSS Katmanları
         self.reader = UnifiedSensorReader()
         self.rtss = RTSSOverlay()
-        self.load_config()
 
         # Kulaklık bataryası: USB (SteelSeries HID) ve Bluetooth (Windows HFP) ayrı ayrı
         try:
@@ -122,13 +254,9 @@ class PowerTrackerApp(
         if self.headset.any_enabled():
             self.headset.start()
 
-        # Genel Kısayol Dinleyicisi
+        # Genel Kısayol Dinleyicisi (OSD + Akıllı Kademe Kısayolları)
         self.hotkey_mgr = GlobalHotkeyManager(on_trigger=lambda: self.root.after(0, self.toggle_rtss))
-        self.hotkey_mgr.start(
-            self.config.get("rtss_hotkey", "Alt+Shift+R"),
-            vk=self.config.get("rtss_hotkey_vk"),
-            mod=self.config.get("rtss_hotkey_mod", 5)
-        )
+        self.register_all_hotkeys()
 
         # Oturum İstatistikleri
         self.session_start = time.time()
@@ -162,6 +290,15 @@ class PowerTrackerApp(
         self.smart_switcher.tier2_plan_guid = self.config.get("smart_switch_t2_guid", self.config.get("smart_switch_med_guid", ""))
         self.smart_switcher.tier3_plan_guid = self.config.get("smart_switch_t3_guid", "")
         self.smart_switcher.tier4_plan_guid = self.config.get("smart_switch_t4_guid", self.config.get("smart_switch_high_guid", ""))
+
+        # Açılışta aktif güç planı hangi kademeye karşılık geliyorsa current_tier'i ona eşitle
+        if self._last_detected_plan_guid:
+            for _r in range(1, 5):
+                _tg = str(getattr(self.smart_switcher, f"tier{_r}_plan_guid", "") or "").lower()
+                if _tg and _tg == self._last_detected_plan_guid.lower():
+                    self.smart_switcher.current_tier = f"tier{_r}"
+                    self.smart_switcher._candidate_tier = f"tier{_r}"
+                    break
 
         # 4 Kademe Monitör Hz Hedefleri (0 = Değiştirme)
         self.smart_switcher.tier1_hz = int(self.config.get("smart_switch_t1_hz", 0))
@@ -209,6 +346,11 @@ class PowerTrackerApp(
         self.smart_t2_hz2_var = tk.StringVar(value=str(self.smart_switcher.tier2_hz2) if self.smart_switcher.tier2_hz2 > 0 else "")
         self.smart_t3_hz2_var = tk.StringVar(value=str(self.smart_switcher.tier3_hz2) if self.smart_switcher.tier3_hz2 > 0 else "")
         self.smart_t4_hz2_var = tk.StringVar(value=str(self.smart_switcher.tier4_hz2) if self.smart_switcher.tier4_hz2 > 0 else "")
+
+        self.smart_t1_hotkey_var = tk.StringVar(value=str(self.config.get("smart_switch_t1_hotkey", "Ctrl+Alt+1") or "none"))
+        self.smart_t2_hotkey_var = tk.StringVar(value=str(self.config.get("smart_switch_t2_hotkey", "Ctrl+Alt+2") or "none"))
+        self.smart_t3_hotkey_var = tk.StringVar(value=str(self.config.get("smart_switch_t3_hotkey", "Ctrl+Alt+3") or "none"))
+        self.smart_t4_hotkey_var = tk.StringVar(value=str(self.config.get("smart_switch_t4_hotkey", "Ctrl+Alt+4") or "none"))
 
         self.smart_t2_gpu_var = tk.StringVar(value=str(int(self.smart_switcher.tier2_gpu_pct)))
         self.smart_t2_cpu_var = tk.StringVar(value=str(int(self.smart_switcher.tier2_cpu_pct)))
@@ -259,6 +401,7 @@ class PowerTrackerApp(
             # Windows açılışında pencere gösterme: doğrudan sistem tepsisinde başla
             self.root.withdraw()
         else:
+            self.root.update_idletasks()
             self.root.deiconify()  # Pencere nihai boyutu ve tüm arayüz bileşenleriyle hazır olunca tek seferde pürüzsüz göster
         self.init_tray_icon()
         self.instance_server = start_instance_listener(self)
@@ -341,7 +484,48 @@ class PowerTrackerApp(
         except Exception:
             pass
 
+    def apply_ttk_theme(self):
+        """ttk.Combobox ve ttk.Scrollbar stillerini aktif THEME renklerine uyarlar."""
+        try:
+            from tkinter import ttk
+            style = ttk.Style(self.root)
+            style.theme_use("clam")
+            style.configure(
+                "TCombobox",
+                fieldbackground=THEME["card_inner"],
+                background=THEME["btn_bg"],
+                foreground=THEME["text_primary"],
+                arrowcolor=THEME["accent_cyan"],
+                bordercolor=THEME["card_border"],
+                lightcolor=THEME["card_border"],
+                darkcolor=THEME["card_border"],
+                selectbackground=THEME["accent_cyan"],
+                selectforeground=THEME["bg"],
+            )
+            style.map(
+                "TCombobox",
+                fieldbackground=[("readonly", THEME["card_inner"]), ("disabled", THEME["bg"])],
+                foreground=[("readonly", THEME["text_primary"]), ("disabled", THEME["text_muted"])],
+                background=[("active", THEME["btn_hover"]), ("readonly", THEME["btn_bg"])],
+                selectbackground=[("readonly", THEME["card_inner"])],
+                selectforeground=[("readonly", THEME["text_primary"])],
+            )
+            style.configure(
+                "Vertical.TScrollbar",
+                background=THEME["btn_bg"],
+                troughcolor=THEME["bg"],
+                bordercolor=THEME["card_border"],
+                arrowcolor=THEME["text_muted"],
+            )
+            self.root.option_add("*TCombobox*Listbox.background", THEME["card_bg"])
+            self.root.option_add("*TCombobox*Listbox.foreground", THEME["text_primary"])
+            self.root.option_add("*TCombobox*Listbox.selectBackground", THEME["accent_cyan"])
+            self.root.option_add("*TCombobox*Listbox.selectForeground", THEME["bg"])
+        except Exception:
+            pass
+
     def build_ui(self):
+        self.apply_ttk_theme()
         f_font = THEME["font_family"]
 
         # --- 1. ÜST HEADER BAR ---
@@ -446,6 +630,24 @@ class PowerTrackerApp(
         self.btn_lang.pack(side="right", padx=(4, 0))
         self.add_tooltip(self.btn_lang, lambda: _t("tooltip_language", "🌐 Dil Seçimi: Arayüz dilini anında değiştirin"))
 
+        # 🐙 GitHub Profil Avatarı (Dil butonunun hemen solunda; yalnızca token girildiğinde görünür)
+        self.btn_github_avatar = tk.Button(
+            f_actions,
+            text="",
+            bg=THEME["card_inner"],
+            activebackground=THEME["btn_active"],
+            relief="flat", bd=0, padx=int(3 * UI_SCALE), pady=int(2 * UI_SCALE), cursor="hand2",
+            highlightbackground=THEME["card_border"], highlightthickness=1,
+            command=self.open_settings
+        )
+        self.add_tooltip(
+            self.btn_github_avatar,
+            lambda: _t("header_github_tip", "🐙 @{user} • GitHub Gist Bağlı (Ayarları açmak için tıklayın)").format(
+                user=(getattr(self, "_github_profile_cache", {}) or {}).get("login", "GitHub")
+            )
+        )
+        self.refresh_header_github_avatar()
+
         # 🎨 Büyükşehir Temaları Seçim Butonu
         self.btn_theme_menu = tk.Button(
             f_actions,
@@ -470,7 +672,7 @@ class PowerTrackerApp(
                                            tooltip=lambda: _t("tooltip_cli_guide", "💻 CLI Komut Kılavuzu: Terminal komutları, otomasyon ve parametre rehberi"))
         self.btn_cli_guide.pack(side="right", padx=(4, 0))
 
-        self.btn_test_screen = self.make_btn(f_actions, "🎮", self.toggle_test_screen, fg="#00E5FF", padx=int(8 * UI_SCALE),
+        self.btn_test_screen = self.make_btn(f_actions, "🎮", self.toggle_test_screen, fg=THEME["accent_cyan"], padx=int(8 * UI_SCALE),
                                              tooltip=lambda: _t("tooltip_test_screen", "🎮 OSD Test Ekranı: Oyun açmadan RTSS oyun içi göstergesini masaüstünde canlı test edin"))
         self.btn_test_screen.pack(side="right", padx=(4, 0))
 
@@ -478,7 +680,7 @@ class PowerTrackerApp(
                                            tooltip=lambda: _t("tooltip_hide_tray", "📥 Tepsiye Gizle: Uygulama penceresini kapatmadan Windows saat yanına küçültün"))
         self.btn_hide_tray.pack(side="right", padx=(4, 0))
 
-        self.btn_history = self.make_btn(f_actions, "📊", self.open_history_report, fg="#38BDF8", padx=int(8 * UI_SCALE),
+        self.btn_history = self.make_btn(f_actions, "📊", self.open_history_report, fg=THEME["accent_cyan"], padx=int(8 * UI_SCALE),
                                          tooltip=lambda: _t("tooltip_history", "📊 Tüketim Raporu: Günlük ve aylık detaylı elektrik harcama geçmişini görüntüleyin"))
         self.btn_history.pack(side="right", padx=(4, 0))
 
@@ -532,7 +734,7 @@ class PowerTrackerApp(
                 tk.Frame(f_rates, bg=THEME["card_border"], width=1).pack(side="left", fill="y", pady=3)
 
         rate_col(_t("hero_hourly", "SAATLİK TL"), THEME["accent_green"], "lbl_rate_hour")
-        rate_col(_t("hero_daily", "GÜNLÜK"), "#38BDF8", "lbl_rate_day")
+        rate_col(_t("hero_daily", "GÜNLÜK"), THEME["accent_cyan"], "lbl_rate_day")
         rate_col(_t("hero_monthly", "AYLIK (30G)"), THEME["accent_purple"], "lbl_rate_month", last=True)
 
         # --- 3. BİRLEŞİK 2 SÜTUNLU GÖVDE ---
@@ -557,10 +759,17 @@ class PowerTrackerApp(
         # Sağ Kolon İçeriği
         self.build_rtss_panel(f_col_rtss)
 
-        # Diğer Sekmelerin Sayfalarını Oluştur
-        self.build_tab_powerplan()
-        self.build_tab_smart()
-        self.build_tab_compare()
+        # Yalnızca aktif sekmeyi hemen çiz; diğer sekmeler ilk geçişte lazy-load edilir (hızlı açılış)
+        self._built_tabs = {"cost"}
+        if self.current_tab == "powerplan":
+            self.build_tab_powerplan()
+            self._built_tabs.add("powerplan")
+        elif self.current_tab == "smart":
+            self.build_tab_smart()
+            self._built_tabs.add("smart")
+        elif self.current_tab == "compare":
+            self.build_tab_compare()
+            self._built_tabs.add("compare")
 
     def switch_tab(self, tab_id):
         self.current_tab = tab_id
@@ -575,6 +784,9 @@ class PowerTrackerApp(
                 if ind:
                     ind.config(bg=THEME["bg"])
 
+        if not hasattr(self, '_built_tabs'):
+            self._built_tabs = {"cost"}
+
         if tab_id == "cost":
             self.tab_powerplan.pack_forget()
             self.tab_smart.pack_forget()
@@ -584,66 +796,126 @@ class PowerTrackerApp(
             self.tab_cost.pack_forget()
             self.tab_smart.pack_forget()
             self.tab_compare.pack_forget()
+            if "powerplan" not in self._built_tabs:
+                self.build_tab_powerplan()
+                self._built_tabs.add("powerplan")
+            else:
+                self.refresh_power_plans_ui()
             self.tab_powerplan.pack(fill="both", expand=True)
-            self.refresh_power_plans_ui()
         elif tab_id == "smart":
             self.tab_cost.pack_forget()
             self.tab_powerplan.pack_forget()
             self.tab_compare.pack_forget()
+            if "smart" not in self._built_tabs:
+                self.build_tab_smart()
+                self._built_tabs.add("smart")
+            else:
+                self.refresh_smart_tab_ui()
             self.tab_smart.pack(fill="both", expand=True)
-            self.refresh_smart_tab_ui()
         elif tab_id == "compare":
             self.tab_cost.pack_forget()
             self.tab_powerplan.pack_forget()
             self.tab_smart.pack_forget()
+            if "compare" not in self._built_tabs:
+                self.build_tab_compare()
+                self._built_tabs.add("compare")
+            else:
+                self.refresh_compare_matrix_ui()
             self.tab_compare.pack(fill="both", expand=True)
-            self.refresh_compare_matrix_ui()
+
+    def make_circular_avatar(self, av_bytes: bytes, size_px: int):
+        """PNG/JPEG byte verisinden dairesel ImageTk.PhotoImage üretir."""
+        if not av_bytes:
+            return None
+        try:
+            import io
+            from PIL import Image, ImageDraw
+            im = Image.open(io.BytesIO(av_bytes)).convert("RGBA").resize((size_px, size_px), Image.Resampling.LANCZOS)
+            mask = Image.new("L", (size_px, size_px), 0)
+            ImageDraw.Draw(mask).ellipse((0, 0, size_px - 1, size_px - 1), fill=255)
+            out = Image.new("RGBA", (size_px, size_px), (0, 0, 0, 0))
+            out.paste(im, (0, 0), mask)
+            return ImageTk.PhotoImage(out)
+        except Exception:
+            return None
+
+    def refresh_header_github_avatar(self):
+        """Ana pencere başlığındaki dil butonunun solunda GitHub profil avatarını günceller."""
+        btn = getattr(self, "btn_github_avatar", None)
+        if not btn or not btn.winfo_exists():
+            return
+        tok = str(self.config.get("github_gist_token", "") or "").strip()
+        if not tok:
+            try:
+                btn.pack_forget()
+            except Exception:
+                pass
+            return
+
+        cache = getattr(self, "_github_profile_cache", None) or {}
+        if cache.get("token") == tok and cache.get("login"):
+            photo = self.make_circular_avatar(cache.get("avatar_bytes", b""), max(16, int(20 * UI_SCALE)))
+            if photo is not None:
+                btn.config(image=photo, text="")
+                btn.image = photo
+            else:
+                btn.config(image="", text="🐙", fg=THEME["accent_cyan"], font=(THEME["font_family"], fs(8), "bold"))
+            if hasattr(self, "btn_lang") and self.btn_lang.winfo_exists():
+                btn.pack(side="right", after=self.btn_lang, padx=(4, 0))
+            else:
+                btn.pack(side="right", padx=(4, 0))
+            return
+
+        if len(tok) < 20 or getattr(self, "_github_avatar_fetching", None) == tok:
+            return
+        self._github_avatar_fetching = tok
+
+        def _worker():
+            try:
+                from config_manager import fetch_github_user_and_backup_gist
+                ok, info, _ = fetch_github_user_and_backup_gist(tok)
+            except Exception:
+                ok, info = False, {}
+            def _done():
+                self._github_avatar_fetching = None
+                if ok and str(self.config.get("github_gist_token", "") or "").strip() == tok:
+                    self._github_profile_cache = {
+                        "token": tok,
+                        "login": info.get("login", ""),
+                        "avatar_bytes": info.get("avatar_bytes", b""),
+                    }
+                    if info.get("gist_id") and not self.config.get("github_gist_id"):
+                        self.config["github_gist_id"] = info["gist_id"]
+                        self.save_config()
+                    self.refresh_header_github_avatar()
+            try:
+                self.root.after(0, _done)
+            except Exception:
+                pass
+
+        threading.Thread(target=_worker, daemon=True).start()
 
     def apply_theme_to_ui(self, theme_key: str):
         """Kullanıcı tema değiştirdiğinde GUI renklerini çalışma anında yeniler."""
-        from config_manager import set_active_theme, THEME
-        if not set_active_theme(theme_key):
+        from config_manager import set_active_theme, resolve_theme_key, apply_dark_titlebar, THEME
+        resolved = resolve_theme_key(theme_key)
+        if not set_active_theme(resolved):
             return
-        self.config["theme"] = theme_key
+        self.config["theme"] = resolved
         self.save_config()
 
-        # Ana zeminler
+        cur_tab = getattr(self, "current_tab", "cost")
         self.root.configure(bg=THEME["bg"])
-        if hasattr(self, 'f_header') and self.f_header:
-            self.f_header.configure(bg=THEME["bg"])
-        if hasattr(self, 'f_tabs') and self.f_tabs:
-            self.f_tabs.configure(bg=THEME["bg"])
-        if hasattr(self, 'tab_cost') and self.tab_cost:
-            self.tab_cost.configure(bg=THEME["bg"])
-        if hasattr(self, 'tab_powerplan') and self.tab_powerplan:
-            self.tab_powerplan.configure(bg=THEME["bg"])
-        if hasattr(self, 'tab_smart') and self.tab_smart:
-            self.tab_smart.configure(bg=THEME["bg"])
-        if hasattr(self, 'tab_compare') and self.tab_compare:
-            self.tab_compare.configure(bg=THEME["bg"])
+        apply_dark_titlebar(self.root)
 
-        # Aksiyon butonları
-        if hasattr(self, 'btn_theme_menu') and self.btn_theme_menu.winfo_exists():
-            self.btn_theme_menu.configure(bg=THEME["card_inner"], fg=THEME["accent_cyan"],
-                                          activebackground=THEME["btn_active"], activeforeground=THEME["accent_cyan"],
-                                          highlightbackground=THEME["card_border"])
-        if hasattr(self, 'btn_lang') and self.btn_lang.winfo_exists():
-            self.btn_lang.configure(bg=THEME["card_inner"], fg=THEME["text_primary"],
-                                    activebackground=THEME["btn_active"], activeforeground=THEME["accent_cyan"],
-                                    highlightbackground=THEME["card_border"])
+        for w in self.root.winfo_children():
+            try:
+                w.destroy()
+            except Exception:
+                pass
 
-        # Sekme çubuğunu yeniden çiz
-        self.switch_tab(self.current_tab)
-
-        # Sekme içeriklerini yeniden oluştur
-        if hasattr(self, 'refresh_cost_tab_ui'):
-            self.refresh_cost_tab_ui()
-        if hasattr(self, 'refresh_power_plans_ui'):
-            self.refresh_power_plans_ui()
-        if hasattr(self, 'refresh_smart_tab_ui'):
-            self.refresh_smart_tab_ui()
-        if hasattr(self, 'refresh_compare_matrix_ui'):
-            self.refresh_compare_matrix_ui()
+        self.build_ui()
+        self.switch_tab(cur_tab)
 
     def show_language_menu(self):
         """Bayraklı dil seçim penceresini gerçek pürüzsüz bayrak resimleriyle açar."""
@@ -761,11 +1033,11 @@ class PowerTrackerApp(
 
         f_pop_title = tk.Frame(f_inner, bg=THEME["card_bg"])
         f_pop_title.pack(fill="x", padx=6, pady=(3, 6))
-        tk.Label(f_pop_title, text="🎨 ŞEHİR TEMALARI", font=(f_font, fs(7), "bold"),
+        tk.Label(f_pop_title, text=_t("theme_menu_title", "🎨 TEMA SEÇİMİ"), font=(f_font, fs(7), "bold"),
                  fg=THEME["accent_cyan"], bg=THEME["card_bg"]).pack(side="left")
 
-        from config_manager import AVAILABLE_THEMES
-        cur_theme = self.config.get("theme", "obsidian_cyber")
+        from config_manager import AVAILABLE_THEMES, resolve_theme_key
+        cur_theme = resolve_theme_key(self.config.get("theme", "auto"))
         is_tr = (self.lang_mgr.active_language_code == "tr") if hasattr(self, 'lang_mgr') else True
 
         for code, th in AVAILABLE_THEMES.items():
@@ -919,6 +1191,51 @@ class PowerTrackerApp(
         except Exception:
             pass
 
+    def register_all_hotkeys(self):
+        """RTSS OSD kısayolu ile (etkinse) 4 Akıllı Kademe kısayollarını tek dinleyicide kaydeder."""
+        if not hasattr(self, 'hotkey_mgr') or not self.hotkey_mgr:
+            return
+        extra = {}
+        if bool(self.config.get("smart_switch_hotkeys_enabled", False)):
+            for t_num in (1, 2, 3, 4):
+                hk = str(self.config.get(f"smart_switch_t{t_num}_hotkey", f"Ctrl+Alt+{t_num}") or "none")
+                if hk and hk.lower() != "none":
+                    extra[f"tier{t_num}"] = (hk, lambda n=t_num: self.root.after(0, lambda: self.trigger_smart_tier_hotkey(n)))
+        self.hotkey_mgr._extra_bindings = extra
+        self.hotkey_mgr.start(
+            self.config.get("rtss_hotkey", "Alt+Shift+R"),
+            vk=self.config.get("rtss_hotkey_vk"),
+            mod=self.config.get("rtss_hotkey_mod", 5)
+        )
+
+    def trigger_smart_tier_hotkey(self, tier_num: int):
+        """Global klavye kısayolundan ilgili Akıllı Kademeyi anında uygular ve manuel moda alır."""
+        sw = getattr(self, 'smart_switcher', None)
+        if not sw:
+            return
+        if getattr(sw, 'enabled', False):
+            sw.enabled = False
+            self.config["smart_switch_enabled"] = False
+            if hasattr(self, 'smart_switch_var'):
+                self.smart_switch_var.set(False)
+            self.save_config()
+
+        if not getattr(sw, f"tier{tier_num}_plan_guid", "") and hasattr(self, 'update_smart_switch_options'):
+            self.update_smart_switch_options()
+
+        hk = str(self.config.get(f"smart_switch_t{tier_num}_hotkey", f"Ctrl+Alt+{tier_num}") or "")
+        sw._apply_tier(
+            f"tier{tier_num}",
+            reason=_t("smart_reason_hotkey", "Global Kısayol ({key}) ile Seçildi").format(key=hk)
+        )
+        if hasattr(self, 'update_smart_live'):
+            self.update_smart_live()
+        if hasattr(self, 'tray_icon') and self.tray_icon:
+            try:
+                self.tray_icon.update_menu()
+            except Exception:
+                pass
+
     def toggle_rtss(self):
         cur = self.config.get("rtss_enabled", True)
         new_val = not cur
@@ -938,6 +1255,11 @@ class PowerTrackerApp(
                 self.rtss.update_osd(txt)
 
         self.refresh_rtss_preview()
+        if hasattr(self, "tray_icon") and self.tray_icon:
+            try:
+                self.tray_icon.update_menu()
+            except Exception:
+                pass
         if hasattr(self, "lbl_rtss_note"):
             status_txt = _t("rtss_status_opened", "Açıldı") if new_val else _t("rtss_status_closed", "Kapatıldı")
             hk = self.config.get("rtss_hotkey", _t("rtss_note_shortcut", "Kısayol"))
@@ -1183,30 +1505,15 @@ class PowerTrackerApp(
                         set_status_lbl(self.lbl_zalman_status, tr('zalman_passive', "○ Pasif"), fg=THEME["text_muted"])
 
             # Laboratuvar Kalibrasyonu (RTX 5070 12GB + Ryzen 7 5800X)
-            pc_wall_w = 46.7 + 1.632 * cpu_w + 1.170 * gpu_w
-
-            ext_wall = 0.0
-            if hasattr(self, 'custom_devices') and self.custom_devices:
-                for dev in self.custom_devices:
-                    if dev.get("enabled", True) and dev.get("active", False):
-                        try:
-                            ext_wall += float(dev.get("watt", 0.0))
-                        except (ValueError, TypeError):
-                            pass
-            else:
-                if self.asus_var.get():
-                    ext_wall += float(self.config.get("asus_monitor_w", 16.5))
-                if self.samsung_var.get():
-                    ext_wall += float(self.config.get("samsung_monitor_w", 19.0))
-                if self.modem_var.get():
-                    ext_wall += float(self.config.get("modem_w", 10.0))
-
-            total_wall_w = max(40.0, pc_wall_w + ext_wall)
+            total_wall_w = calculate_wall_power_w(
+                cpu_w, gpu_w, self.config,
+                getattr(self, 'custom_devices', None) if getattr(self, 'custom_devices', None) else None
+            )
 
             if total_wall_w > 480:
                 set_status_lbl(self.lbl_power_status, tr("status_full_load", "🔥 TAM YÜK"), fg=THEME["accent_rose"])
             elif total_wall_w > 260:
-                set_status_lbl(self.lbl_power_status, tr("status_game_load", "🎮 OYUN / YÜK"), fg="#38BDF8")
+                set_status_lbl(self.lbl_power_status, tr("status_game_load", "🎮 OYUN / YÜK"), fg=THEME["accent_cyan"])
             else:
                 set_status_lbl(self.lbl_power_status, tr("status_idle_save", "🌱 TASARRUF / BOŞTA"), fg=THEME["accent_green"])
 
@@ -1305,7 +1612,7 @@ class PowerTrackerApp(
 
         else:
             if hasattr(self, 'lbl_status'):
-                set_status_lbl(self.lbl_status, f"⚠ {tr('sensor_status_disconnected', 'Afterburner Kapalı!')}", fg="#EF4444", bg="#2B1515")
+                set_status_lbl(self.lbl_status, f"⚠ {tr('sensor_status_disconnected', 'Afterburner Kapalı!')}", fg=THEME["accent_rose"], bg=THEME["card_inner"])
             set_status_lbl(self.lbl_power_status, f"• {tr('power_status_no_conn', 'BAĞLANTI YOK')}", fg=THEME["text_muted"])
             if hasattr(self, 'lbl_zalman_status'):
                 set_status_lbl(self.lbl_zalman_status, f"○ {tr('zalman_no_sensor', 'Sensör Yok')}", fg=THEME["text_muted"])
@@ -1376,6 +1683,21 @@ class PowerTrackerApp(
                 guid = arg.lower()
                 ok = PowerManagerService.set_active_plan(guid)
                 if ok:
+                    self._last_detected_plan_guid = guid
+                    sw = getattr(self, 'smart_switcher', None)
+                    if sw:
+                        if getattr(sw, 'enabled', False):
+                            sw.enabled = False
+                            self.config["smart_switch_enabled"] = False
+                            if hasattr(self, 'smart_switch_var'):
+                                self.root.after(0, lambda: self.smart_switch_var.set(False))
+                            self.save_config()
+                        for r in range(1, 5):
+                            tg = str(getattr(sw, f"tier{r}_plan_guid", "") or "").lower()
+                            if tg and tg == guid:
+                                sw.current_tier = f"tier{r}"
+                                sw._candidate_tier = f"tier{r}"
+                                break
                     p_name = _t("power_plan_default", "Güç Planı")
                     p_icon = "⚡"
                     if getattr(self, 'power_plans', None):
@@ -1390,8 +1712,31 @@ class PowerTrackerApp(
                         icon=p_icon,
                         subtitle=_t("toast_applied_via_cli", "CLI komutu ile uygulandı")
                     ))
+                    if hasattr(self, 'tray_icon') and self.tray_icon:
+                        self.root.after(0, self.tray_icon.update_menu)
                     return f"OK: Plan {p_name} ({guid}) uygulandi."
                 return "ERR: Failed to set plan"
+
+            elif cmd == "set_hz":
+                try:
+                    hz_val = int(arg)
+                except ValueError:
+                    return "ERR: Invalid Hz"
+                from power_manager import DisplayManagerService
+                ok = DisplayManagerService.set_refresh_rate(hz_val)
+                actual = DisplayManagerService.get_current_refresh_rate()
+                if ok or int(actual) == int(hz_val):
+                    if hasattr(self, 'update_smart_live'):
+                        self.root.after(0, self.update_smart_live)
+                    if hasattr(self, 'tray_icon') and self.tray_icon:
+                        self.root.after(0, self.tray_icon.update_menu)
+                    self.root.after(0, lambda: self.show_power_plan_toast(
+                        plan_name=f"Monitör • {actual} Hz",
+                        icon="🖥️",
+                        subtitle=_t("toast_applied_via_cli", "CLI komutu ile uygulandı")
+                    ))
+                    return f"OK: Hz {actual}"
+                return f"ERR: Failed to set Hz {hz_val}"
 
             elif cmd == "smart":
                 act = arg.lower()
@@ -1477,6 +1822,9 @@ if __name__ == "__main__":
         WindowsAutoStart.ensure_tray_flag()
     except Exception:
         pass
+
+    import atexit
+    atexit.register(HistoryManager.flush_history)
 
     root = tk.Tk()
     app = PowerTrackerApp(root, start_in_tray=start_in_tray)

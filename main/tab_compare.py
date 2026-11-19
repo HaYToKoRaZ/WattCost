@@ -144,7 +144,7 @@ class CompareTabMixin:
 
         # Sütun Başlıkları: Güç Planları ve Tek Tıkla Geçiş Butonları
         for plan, _ in settings_list:
-            col_hdr = tk.Frame(hdr_frame, bg="#131B2E" if plan.is_active else THEME["card_bg"],
+            col_hdr = tk.Frame(hdr_frame, bg=THEME["card_inner"] if plan.is_active else THEME["card_bg"],
                                highlightbackground=THEME["accent_green"] if plan.is_active else THEME["card_border"],
                                highlightthickness=1, width=w_col, height=int(56 * UI_SCALE))
             col_hdr.pack(side="left", fill="y", padx=2, pady=2)
@@ -206,9 +206,9 @@ class CompareTabMixin:
             if diff_only and not is_different:
                 continue
 
-            row_bg = "#182238" if is_different else ("#121827" if row_idx % 2 == 0 else "#0E1420")
+            row_bg = THEME["card_inner"] if is_different else (THEME["card_bg"] if row_idx % 2 == 0 else THEME["bg"])
             row_frame = tk.Frame(scrollable_frame, bg=row_bg,
-                                 highlightbackground="#2C3B60" if is_different else "#1B2335",
+                                 highlightbackground=THEME["accent_cyan"] if is_different else THEME["card_border"],
                                  highlightthickness=1)
             row_frame.pack(fill="x", pady=1)
 
@@ -240,7 +240,7 @@ class CompareTabMixin:
                 # Hover Efekti
                 def _on_enter(e, box=col_box, lbl=lbl_val):
                     box.config(highlightbackground=THEME["accent_cyan"], highlightthickness=1)
-                    lbl.config(fg="#FFFFFF")
+                    lbl.config(fg=THEME["text_primary"])
 
                 def _on_leave(e, box=col_box, lbl=lbl_val, is_diff=is_different):
                     box.config(highlightbackground=THEME["card_border"], highlightthickness=1)

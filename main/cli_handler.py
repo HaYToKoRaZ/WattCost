@@ -8,6 +8,7 @@ veya bağımsız (headless) olarak doğrudan Windows API üzerinden işletir.
 import sys
 import os
 import argparse
+import difflib
 
 # Windows Terminal UTF-8 Çıktı Desteği
 try:
@@ -19,7 +20,7 @@ except Exception:
     pass
 
 from config_manager import send_instance_command, load_config_dict, save_config_dict, CONFIG_FILE_NAME
-from power_manager import PowerManagerService
+from power_manager import PowerManagerService, DisplayManagerService
 from language_manager import _t
 
 
@@ -151,6 +152,35 @@ def cmd_list_plans():
     print(f"\n {CLR_YELLOW}💡 İpucu: Plan değiştirmek için:{CLR_RESET} WattCost.exe --plan <1-4|GUID|isim>\n")
 
 
+VALID_CLI_FLAGS = [
+    "-h", "--help",
+    "-l", "--list-plans",
+    "-p", "--plan",
+    "-s", "--smart",
+    "--hz",
+    "--status",
+    "--osd",
+    "--tab",
+    "--tray",
+    "--hide",
+    "hide",
+]
+
+
+def _suggest_matches(word: str, candidates: list, n: int = 3, cutoff: float = 0.5) -> list:
+    """Verilen hatalı girişe en yakın geçerli komut/parametre önerilerini döner."""
+    if not word or not candidates:
+        return []
+    return difflib.get_close_matches(word.strip().lower(), candidates, n=n, cutoff=cutoff)
+
+
+def _print_suggestion(word: str, candidates: list):
+    matches = _suggest_matches(word, candidates)
+    if matches:
+        sugg = ", ".join(f"{CLR_CYAN}{m}{CLR_RESET}" for m in matches)
+        print(f" {CLR_YELLOW}{_t('cli_did_you_mean', 'Bunu mu demek istediniz:')}{CLR_RESET} {sugg}")
+
+
 def cmd_set_plan(specifier: str):
     """Güç planını değiştirir. Açık GUI varsa socket ile bildirir, yoksa doğrudan uygular."""
     print_banner()
@@ -166,8 +196,13 @@ def cmd_set_plan(specifier: str):
             plan, tier = find_plan_by_specifier(specifier)
 
         if not plan:
-            print(f"{CLR_RED}[HATA] '{specifier}' ile eşleşen bir güç planı bulunamadı!{CLR_RESET}")
-            print(f"Sistemdeki planları görmek için: {CLR_CYAN}WattCost.exe --list-plans{CLR_RESET}")
+            err_msg = _t("cli_err_plan_not_found", "'{spec}' ile eşleşen bir güç planı bulunamadı!").format(spec=specifier)
+            print(f"{CLR_RED}[HATA] {err_msg}{CLR_RESET}")
+            plans = PowerManagerService.get_power_plans()
+            if plans:
+                _print_suggestion(specifier, [p.name.lower() for p in plans])
+            print(f" {_t('cli_hint_help', 'Tüm geçerli komutları görmek için: WattCost. HaYTooL.exe --help')}")
+            print(f" {CLR_CYAN}WattCost. HaYTooL.exe --list-plans{CLR_RESET}")
             return
 
     # Önce açık GUI uygulamasına komut iletmeyi dene
@@ -195,8 +230,10 @@ def cmd_smart_switch(action: str):
     act = action.strip().lower()
 
     if act not in ("on", "off", "toggle", "status", "1", "0", "true", "false"):
-        print(f"{CLR_RED}[HATA] Geçersiz parametre: '{action}'{CLR_RESET}")
-        print(f"Kullanım: {CLR_CYAN}WattCost.exe --smart <on | off | toggle | status>{CLR_RESET}")
+        err_msg = _t("cli_err_invalid_param", "Geçersiz parametre: '{val}'").format(val=action)
+        print(f"{CLR_RED}[HATA] {err_msg}{CLR_RESET}")
+        _print_suggestion(act, ["on", "off", "toggle", "status"])
+        print(f"Kullanım: {CLR_CYAN}WattCost. HaYTooL.exe --smart <on | off | toggle | status>{CLR_RESET}")
         return
 
     # Normalizasyon
@@ -241,9 +278,26 @@ def cmd_smart_switch(action: str):
 
 
 def cmd_set_hz(hz_val: int):
-    """Monitörün yenileme hızı komutunu bilgilendirir."""
+    """Birincil monitörün yenileme hızını (Hz) doğrular ve ayarlar."""
     print_banner()
-    print(f"{CLR_YELLOW}[BİLGİ] Monitör Hz yönetimi Windows 11 kararlılığı ve standart kullanıcı kısıtlamaları nedeniyle devre dışı bırakılmıştır.{CLR_RESET}")
+    supported = DisplayManagerService.get_supported_refresh_rates()
+    if supported and hz_val not in supported:
+        print(f"{CLR_RED}[HATA] {_t('cli_err_hz_unsupported', '{hz} Hz değeri mevcut monitör tarafından desteklenmiyor!').format(hz=hz_val)}{CLR_RESET}")
+        rates_str = ", ".join(f"{r} Hz" for r in supported)
+        print(f" {CLR_CYAN}{_t('cli_hz_supported_list', 'Desteklenen değerler: {rates}').format(rates=rates_str)}{CLR_RESET}")
+        return
+
+    is_gui_running, resp = send_instance_command(f"CMD:set_hz {hz_val}")
+    if is_gui_running and resp.startswith("OK"):
+        print(f"{CLR_GREEN}{CLR_BOLD}[BAŞARILI]{CLR_RESET} {_t('cli_ok_hz_set', 'Monitör yenileme hızı {hz} Hz olarak ayarlandı.').format(hz=hz_val)}")
+        return
+
+    ok = DisplayManagerService.set_refresh_rate(hz_val)
+    actual = DisplayManagerService.get_current_refresh_rate()
+    if ok or int(actual) == int(hz_val):
+        print(f"{CLR_GREEN}{CLR_BOLD}[BAŞARILI]{CLR_RESET} {_t('cli_ok_hz_set', 'Monitör yenileme hızı {hz} Hz olarak ayarlandı.').format(hz=actual)}")
+    else:
+        print(f"{CLR_RED}[HATA] {_t('cli_err_hz_failed', 'Monitör yenileme hızı {hz} Hz olarak ayarlanamadı (şu an {actual} Hz).').format(hz=hz_val, actual=actual)}{CLR_RESET}")
 
 
 def cmd_status():
@@ -283,6 +337,17 @@ def cmd_osd(action: str):
     """RivaTuner (RTSS) OSD açma/kapatma/toggle işlemi."""
     print_banner()
     act = action.strip().lower()
+    if act not in ("on", "off", "toggle", "1", "0", "true", "false"):
+        err_msg = _t("cli_err_invalid_param", "Geçersiz parametre: '{val}'").format(val=action)
+        print(f"{CLR_RED}[HATA] {err_msg}{CLR_RESET}")
+        _print_suggestion(act, ["on", "off", "toggle"])
+        print(f"Kullanım: {CLR_CYAN}WattCost. HaYTooL.exe --osd <on | off | toggle>{CLR_RESET}")
+        return
+    if act in ("1", "true"):
+        act = "on"
+    elif act in ("0", "false"):
+        act = "off"
+
     is_gui_running, resp = send_instance_command(f"CMD:osd {act}")
     if is_gui_running and resp.startswith("OK"):
         print(f"{CLR_GREEN}{CLR_BOLD}[BAŞARILI]{CLR_RESET} RivaTuner OSD güncellendi:")
@@ -294,10 +359,24 @@ def cmd_osd(action: str):
 def cmd_tab(tab_name: str) -> bool:
     """WattCost penceresini öne getirir ve belirtilen sekmeye geçirir."""
     target = tab_name.strip().lower()
+    valid_tabs = ["cost", "powerplan", "smart", "compare"]
+    if target not in valid_tabs:
+        print_banner()
+        err_msg = _t("cli_err_invalid_param", "Geçersiz parametre: '{val}'").format(val=tab_name)
+        print(f"{CLR_RED}[HATA] {err_msg}{CLR_RESET}")
+        _print_suggestion(target, valid_tabs)
+        print(f"Kullanım: {CLR_CYAN}WattCost. HaYTooL.exe --tab <cost | powerplan | smart | compare>{CLR_RESET}")
+        return True
+
     is_gui_running, resp = send_instance_command(f"CMD:tab {target}")
     if is_gui_running and resp.startswith("OK"):
+        print_banner()
+        ok_msg = _t("cli_ok_tab_switched", "Pencere öne getirildi ve '{tab}' sekmesi açıldı.").format(tab=target)
+        print(f"{CLR_GREEN}{CLR_BOLD}[BAŞARILI]{CLR_RESET} {ok_msg}")
         return True
-    return False
+    print_banner()
+    print(f"{CLR_YELLOW}[BİLGİ] {_t('cli_err_tab_gui_closed', 'Sekme geçişi için WattCost uygulaması arka planda çalışıyor olmalıdır.')}{CLR_RESET}")
+    return True
 
 
 def handle_cli_args() -> bool:
@@ -309,14 +388,15 @@ def handle_cli_args() -> bool:
     if len(sys.argv) <= 1:
         return False
 
-    # --watch parametresi rtss_overlay dahili izleyicisidir, onu es geç
-    if sys.argv[1] == "--watch":
+    # --watch ve --hide/hide parametreleri arka plan izleyicileridir, CLI olarak kesme
+    if sys.argv[1].lower() in ("--watch", "--hide", "hide"):
         return False
 
     parser = argparse.ArgumentParser(
         prog="WattCost. HaYTooL.exe",
         description="WattCost HaYTooL • PC Güç Planları, Akıllı Otomasyon ve Donanım CLI Yöneticisi",
-        add_help=False
+        add_help=False,
+        exit_on_error=False
     )
 
     parser.add_argument("-h", "--help", action="store_true", help="Bu yardım kılavuzunu görüntüler.")
@@ -326,12 +406,25 @@ def handle_cli_args() -> bool:
     parser.add_argument("--hz", type=int, metavar="<Hz>", help="Birincil monitörün yenileme hızını doğrudan ayarlar (örn. 60, 144, 165, 240).")
     parser.add_argument("--status", action="store_true", help="Mevcut aktif güç planını ve otomasyon durumunu özetler.")
     parser.add_argument("--osd", type=str, metavar="<on|off|toggle>", help="RivaTuner (RTSS) oyun içi göstergesini açar/kapatır.")
-    parser.add_argument("--tab", type=str, metavar="<cost|powerplan|smart|compare>", help=_t("cli_tab_help", "WattCost penceresini öne getirip belirtilen sekmeyi açar."))
+    parser.add_argument("--tab", type=str, metavar="<cost|powerplan|smart|compare>", help=_t("cli_tab_help", "WattCost penceresini öne getirip belirtilen sekmeye geçer."))
 
     try:
         args, unknown = parser.parse_known_args()
-    except Exception as e:
-        print(f"{CLR_RED}[HATA] Argüman ayrıştırma hatası: {e}{CLR_RESET}")
+    except (argparse.ArgumentError, SystemExit, Exception) as e:
+        print_banner()
+        print(f"{CLR_RED}[HATA] {_t('cli_err_parse', 'Komut satırı argüman hatası: {err}').format(err=e)}{CLR_RESET}")
+        if len(sys.argv) > 1:
+            _print_suggestion(sys.argv[1], VALID_CLI_FLAGS)
+        print(f" {_t('cli_hint_help', 'Tüm geçerli komutları görmek için: WattCost. HaYTooL.exe --help')}")
+        return True
+
+    if unknown:
+        print_banner()
+        bad_arg = unknown[0]
+        err_msg = _t("cli_err_unknown_arg", "Bilinmeyen veya hatalı komut: '{arg}'").format(arg=bad_arg)
+        print(f"{CLR_RED}[HATA] {err_msg}{CLR_RESET}")
+        _print_suggestion(bad_arg, VALID_CLI_FLAGS)
+        print(f" {_t('cli_hint_help', 'Tüm geçerli komutları görmek için: WattCost. HaYTooL.exe --help')}")
         return True
 
     # Yardım Göster
@@ -374,6 +467,12 @@ def handle_cli_args() -> bool:
   {CLR_CYAN}--osd <on | off | toggle>{CLR_RESET}
       RivaTuner (RTSS) oyun içi OSD göstergesini açar / kapatır.
 
+  {CLR_CYAN}--tab <cost | powerplan | smart | compare>{CLR_RESET}
+      Açık WattCost penceresini öne getirip ilgili sekmeye geçer.
+
+  {CLR_CYAN}hide, --hide{CLR_RESET}
+      Pencere ve saat yanı tepsi simgesi açmadan arka planda çalışır (yeni INI oluşturmaz).
+
   {CLR_CYAN}-h, --help{CLR_RESET}
       Bu yardım ekranını görüntüler.
 """)
@@ -391,7 +490,7 @@ def handle_cli_args() -> bool:
         cmd_smart_switch(args.smart)
         return True
 
-    if args.hz:
+    if args.hz is not None:
         cmd_set_hz(args.hz)
         return True
 
@@ -404,9 +503,6 @@ def handle_cli_args() -> bool:
         return True
 
     if args.tab:
-        handled = cmd_tab(args.tab)
-        if handled:
-            return True
-        return False
+        return cmd_tab(args.tab)
 
     return False

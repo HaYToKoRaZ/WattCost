@@ -390,8 +390,8 @@ def cmd_exit():
     print_banner()
     closed_any = False
 
-    res = send_instance_command("CLI:exit")
-    if res and res.startswith("OK:"):
+    ok, res = send_instance_command("CLI:exit")
+    if ok and str(res).startswith("OK:"):
         closed_any = True
 
     try:

@@ -126,6 +126,13 @@ class WattCostCoreTests(unittest.TestCase):
         self.assertEqual(app_mod._parse_hide_mode(["app.exe", "hideauto"]), (True, "auto"))
         self.assertEqual(app_mod._parse_hide_mode(["app.exe", "--status"]), (False, None))
 
+    def test_cli_cmd_exit_handles_tuple_response(self):
+        import cli_handler
+        with mock.patch("cli_handler.send_instance_command", return_value=(True, "OK: Exiting")):
+            cli_handler.cmd_exit()
+        with mock.patch("cli_handler.send_instance_command", return_value=(False, "No instance")):
+            cli_handler.cmd_exit()
+
     def test_wall_power_formula_helper(self):
         cfg = {"case_base_w": 46.7}
         devs = [{"active": True, "enabled": True, "watt": 16.5}, {"active": True, "enabled": True, "watt": 10.0}]
